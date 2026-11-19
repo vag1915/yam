@@ -1,0 +1,2129 @@
+<title>Jeu de Yam</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Un écran noir plein cadre, comme Farkle : engrenage à gauche, scores à droite, piste ronde verte entre le gobelet et le panneau STOP. Cinq dés à garder, puis une fiche de marque à choisir au clavier. Tout le texte est en Arial gras, blanc sur noir. L'élément actif est entouré de jaune. */
+:root {
+  --noir: #000;
+  --blanc: #fff;
+  --rouge: #a50c1a;
+  --rouge2: #a50c1a;
+  --vert: #1aa84a;
+  --piste: #14793b;
+  --rail: #0a4a22;
+  --focus: #ffe600;
+  --police: Arial, Helvetica, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--noir);
+  color: var(--blanc);
+  font: 700 18px/1.45 var(--police);
+  padding-block: 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button { font: 700 18px var(--police); color: var(--blanc); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.nav:focus { outline: 6px solid var(--focus); outline-offset: 3px; }
+.nav:focus:not(:focus-visible) { outline: 6px solid var(--focus); outline-offset: 3px; }
+body.sans-cadre .nav:focus { outline: none; }
+.saisie { width: 100%; font: 700 20px var(--police); color: var(--blanc); background: var(--noir); border: 3px solid var(--blanc); border-radius: 12px; padding: 12px 18px; min-height: 58px; }
+
+.ecran { height: 100%; max-width: 900px; margin: 0 auto; background: var(--noir); display: flex; flex-direction: column; overflow: hidden; }
+.vue { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.centre { align-items: center; justify-content: center; padding: 16px; }
+.haut { flex: none; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 4px; }
+.scores { font-size: 15px; text-align: right; line-height: 1.5; min-width: 0; flex: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.ligne-score { padding: 1px 6px; border-radius: 6px; cursor: pointer; }
+.scores.bat { flex-direction: row; align-items: stretch; justify-content: space-around; gap: 6px; text-align: center; }
+.scores.bat .ligne-score { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; border: 2px solid #777; border-radius: 10px; padding: 3px 4px; }
+.scores.bat .sn { font-size: 15px; overflow-wrap: anywhere; line-height: 1.15; }
+.scores.bat .ss { font-size: 26px; line-height: 1.1; }
+.scores.bat .ligne-score.actif { border-color: #fff; }
+.scores.bat .ligne-score.elim { opacity: 0.4; text-decoration: line-through; }
+.scores.cible .ligne-score:not(.elim) { border-color: var(--rouge); border-width: 4px; }
+.engrenage { background: none; border: 0; padding: 4px; width: 56px; height: 56px; border-radius: 10px; flex: none; }
+.engrenage svg { width: 100%; height: 100%; display: block; }
+
+.gros { background: radial-gradient(ellipse at 50% 18%, #ff8f8f 0%, #d90012 48%, #8f000d 100%); color: var(--blanc); border: 0; border-radius: 50%; padding: 52px 28px; width: min(100%, 420px); font-size: clamp(24px, 6vw, 34px); letter-spacing: 0.03em; box-shadow: 0 9px 0 #5a0008, 0 16px 20px rgba(0, 0, 0, 0.8), inset 0 5px 8px rgba(255, 255, 255, 0.5), inset 0 -8px 12px rgba(0, 0, 40, 0.45); transition: transform 0.08s, box-shadow 0.08s; }
+.gros:active { transform: translateY(6px); box-shadow: 0 3px 0 #5a0008, 0 6px 8px rgba(0, 0, 0, 0.8), inset 0 5px 8px rgba(255, 255, 255, 0.5), inset 0 -8px 12px rgba(0, 0, 40, 0.45); }
+.gros small { display: block; font-size: 16px; letter-spacing: 0; font-weight: 700; margin-top: 2px; }
+.menu { display: flex; flex-direction: column; gap: 16px; align-items: center; width: 100%; }
+.gros:active { filter: brightness(1.25); }
+
+#v-partie { padding-bottom: 8px; }
+.jeu { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.dessus { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.grille-box { flex: 1; min-height: 0; overflow: auto; padding: 8px 8px 10px; }
+.infos { text-align: center; padding: 0 12px; }
+.tour { font-size: 18px; }
+.score-tour { font-size: 26px; line-height: 1.1; display: inline-block; padding: 0 14px; border-radius: 8px; }
+.rail { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "piste piste" "gobelet valider"; gap: 8px 16px; justify-items: center; width: 100%; padding: 0 8px; }
+.piste { grid-area: piste; position: relative; width: min(100%, 60vh); aspect-ratio: 3 / 2; border: 7px solid var(--rail); border-radius: 50%; background: radial-gradient(ellipse at 50% 35%, #1b9248 0%, var(--piste) 55%, #0e5a2b 100%); box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.55); }
+#gobelet { grid-area: gobelet; }
+#valider { grid-area: valider; background: #000; }
+.zone { position: absolute; inset: 0; }
+.ico { background: none; border: 0; padding: 0; width: 72px; height: 72px; flex: none; border-radius: 14px; }
+.ico svg { width: 100%; height: 100%; display: block; }
+#valider svg { filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.8)); transition: transform 0.08s; }
+#valider:active svg { transform: translateY(3px) scale(0.97); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8)); }
+.message { min-height: 26px; text-align: center; font-size: 19px; padding: 0 12px; }
+
+.de { position: absolute; left: 0; top: 0; width: var(--sz, 40px); height: var(--sz, 40px); background: var(--noir); border: 2px solid #555; border-radius: 18%; padding: 0; display: block; appearance: none; transition: transform 0.17s ease-out; cursor: pointer; }
+.de svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+.de.kept { box-shadow: 0 0 0 3px var(--blanc); border-color: var(--blanc); }
+.de.joker { border-color: var(--blanc); animation: clignote 0.9s ease-in-out infinite; }
+@keyframes clignote { 0%, 100% { box-shadow: 0 0 0 4px #fff, 0 0 16px 6px #fff; } 50% { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1); } }
+.de.off { display: none; }
+.de:focus { outline-offset: 5px; }
+.dspec { position: absolute; left: 50%; top: 50%; width: 38%; aspect-ratio: 1; transform: translate(-50%, -50%); background: #000; border: 3px solid #fff; border-radius: 16%; z-index: 5; display: flex; align-items: center; justify-content: center; }
+.dspec svg { width: 80%; height: 80%; }
+
+.grille { display: grid; grid-template-columns: max-content repeat(var(--nc, 1), var(--cw, 82px)); gap: 5px 6px; align-items: stretch; justify-content: start; width: max-content; max-width: 100%; }
+.gl { text-transform: uppercase; font-size: 17px; display: flex; align-items: center; padding-left: 4px; line-height: 1.1; }
+.gc { min-height: 40px; border: 2px solid var(--blanc); border-radius: 8px; background: var(--rouge); color: var(--blanc); font: 700 21px var(--police); display: flex; align-items: center; justify-content: center; padding: 2px 4px; text-align: center; width: 100%; }
+.gc.fait { background: var(--noir); }
+.gc.calc { background: var(--noir); border-style: dashed; border-color: #9a9a9a; }
+.gc.entete { background: var(--noir); font-size: 24px; line-height: 1; padding: 2px 0; }
+.gc.entete.actif { background: var(--blanc); color: var(--noir); }
+.gc.bloque { opacity: 0.4; }
+.gc.vue { cursor: default; }
+.grille.bataille .gc { min-height: 48px; border-color: var(--blanc); }
+.grille.bataille .gl { font-size: 18px; }
+.grille.standard { --cw: 56px; }
+.grille.standard .gl { font-size: 19px; }
+
+.corps { flex: 1; min-height: 0; overflow: auto; padding: 12px 4px; display: flex; flex-direction: column; gap: 12px; }
+.corps h2 { font-size: 26px; margin: 0; }
+.btn { background: var(--noir); border: 3px solid var(--blanc); border-radius: 12px; padding: 12px 18px; min-height: 58px; }
+.btn:active { background: var(--blanc); color: var(--noir); }
+.reglage { width: 100%; text-align: left; }
+.bas { padding: 10px 4px 8px; }
+.ok { width: 100%; }
+.liste { display: flex; flex-direction: column; gap: 8px; font-size: 20px; }
+.liste > div { padding: 4px 8px; border-radius: 8px; }
+.gagnant { font-size: clamp(28px, 7vw, 42px); text-align: center; text-transform: uppercase; padding: 20px 8px; line-height: 1.15; border-radius: 10px; }
+.info-fin { font-size: 20px; text-align: center; padding: 6px 8px; border-radius: 8px; }
+
+@media all {
+  .jeu { flex-direction: row-reverse; align-items: stretch; gap: 14px; }
+  .dessus { flex: 1 1 0; min-width: 0; justify-content: center; }
+  .grille-box { flex: 0 0 auto; max-width: 68%; }
+  .piste { width: min(100%, 80vh); }
+  .ico { width: 64px; height: 64px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .score-tour { font-size: 20px; }
+  .tour { font-size: 15px; }
+  .message { min-height: 20px; font-size: 16px; }
+}
+@media (max-width: 559px) {
+  .grille { --cw: 52px; gap: 4px; grid-template-columns: 66px repeat(var(--nc, 1), var(--cw)); }
+  .gc { font-size: 16px; min-height: 36px; }
+  .gl { font-size: 12px; line-height: 1.05; overflow-wrap: anywhere; }
+  .gc.entete { font-size: 20px; }
+  .grille.standard { --cw: 40px; grid-template-columns: 112px repeat(var(--nc, 1), var(--cw)); }
+  .grille.standard .gl { font-size: 14px; }
+  .grille.standard .gc { font-size: 15px; }
+  .grille.bataille { --cw: 64px; grid-template-columns: 104px repeat(var(--nc, 1), var(--cw)); }
+  .grille.bataille .gl { font-size: 14px; }
+  .grille.bataille .gc { font-size: 18px; }
+  .ico { width: 52px; height: 52px; }
+  .rail { padding: 0; gap: 6px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .de { transition: none; }
+  .de.joker { animation: none; box-shadow: 0 0 0 5px #fff, 0 0 16px 6px #fff; }
+}
+</style>
+
+<div class="ecran" id="ecran">
+  <div class="haut" id="haut">
+    <button class="engrenage nav" id="engrenage" type="button" aria-label="Paramètres" data-parle="Paramètres">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <g fill="#fff">
+          <circle cx="24" cy="24" r="14"/>
+          <rect x="20.5" y="3" width="7" height="12" rx="1.5"/>
+          <rect x="20.5" y="3" width="7" height="12" rx="1.5" transform="rotate(45 24 24)"/>
+          <rect x="20.5" y="3" width="7" height="12" rx="1.5" transform="rotate(90 24 24)"/>
+          <rect x="20.5" y="3" width="7" height="12" rx="1.5" transform="rotate(135 24 24)"/>
+          <rect x="20.5" y="3" width="7" height="12" rx="1.5" transform="rotate(180 24 24)"/>
+          <rect x="20.5" y="3" width="7" height="12" rx="1.5" transform="rotate(225 24 24)"/>
+          <rect x="20.5" y="3" width="7" height="12" rx="1.5" transform="rotate(270 24 24)"/>
+          <rect x="20.5" y="3" width="7" height="12" rx="1.5" transform="rotate(315 24 24)"/>
+        </g>
+        <circle cx="24" cy="24" r="6" fill="#000"/>
+      </svg>
+    </button>
+    <div class="scores" id="scores"></div>
+  </div>
+
+  <div class="vue centre" id="v-accueil">
+    <div class="menu">
+      <button class="gros nav" id="nouvelle" type="button" aria-label="Nouvelle partie" data-parle="Nouvelle partie">NOUVELLE PARTIE</button>
+    </div>
+  </div>
+
+  <div class="vue" id="v-partie" hidden>
+    <div class="jeu">
+      <div class="dessus" id="dessus">
+        <div class="infos">
+          <div class="tour" id="tour-de"></div>
+          <div class="score-tour nav" id="info-lancers" tabindex="0" role="group" aria-label="Trois lancers disponibles" data-parle="Trois lancers disponibles">Lancer 1 sur 3</div>
+        </div>
+        <div class="rail" id="rail">
+          <button class="ico nav" id="gobelet" type="button" aria-label="Lancer" data-parle="Lancer">
+        <svg viewBox="0 0 60 76" aria-hidden="true">
+          <defs>
+            <linearGradient id="g-corps" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#0a655e"/><stop offset="0.2" stop-color="#34e6d4"/><stop offset="0.45" stop-color="#21c8b8"/><stop offset="0.8" stop-color="#11897e"/><stop offset="1" stop-color="#064c46"/>
+            </linearGradient>
+            <linearGradient id="g-int" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#022b27"/><stop offset="1" stop-color="#0d8e82"/>
+            </linearGradient>
+          </defs>
+          <path d="M7 15 L53 15 L45.5 67 A15.5 4 0 0 1 14.5 67 Z" fill="url(#g-corps)"/>
+          <path d="M10.6 32 Q30 38.5 49.4 32" fill="none" stroke="#06524c" stroke-width="2.2" stroke-opacity="0.6"/>
+          <path d="M10.6 34 Q30 40.5 49.4 34" fill="none" stroke="#fff" stroke-width="0.9" stroke-opacity="0.3"/>
+          <path d="M12.2 47 Q30 53 47.8 47" fill="none" stroke="#06524c" stroke-width="2.2" stroke-opacity="0.6"/>
+          <path d="M12.2 49 Q30 55 47.8 49" fill="none" stroke="#fff" stroke-width="0.9" stroke-opacity="0.3"/>
+          <path d="M14.5 21 L19 62" fill="none" stroke="#fff" stroke-width="3.4" stroke-opacity="0.4" stroke-linecap="round"/>
+          <ellipse cx="30" cy="15" rx="23" ry="6.2" fill="#1aa99c" stroke="#fff" stroke-width="2"/>
+          <ellipse cx="30" cy="15.5" rx="19.8" ry="4.6" fill="url(#g-int)"/>
+          <path d="M11 13.6 Q30 8.6 49 13.6" fill="none" stroke="#fff" stroke-width="1.1" stroke-opacity="0.55" stroke-linecap="round"/>
+        </svg>
+      </button>
+          <div class="piste"><div class="zone" id="zone"></div></div>
+          <button class="ico nav" id="valider" type="button" aria-label="Valider" data-parle="Valider">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <linearGradient id="v-coche" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#9dffb8"/><stop offset="0.45" stop-color="#25c85a"/><stop offset="1" stop-color="#0a7a30"/>
+            </linearGradient>
+          </defs>
+          <path d="M9 34 L25 50 L55 13" fill="none" stroke="#1c5a30" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 5)"/>
+          <path d="M9 34 L25 50 L55 13" fill="none" stroke="#0b6a2a" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 2)"/>
+          <path d="M9 34 L25 50 L55 13" fill="none" stroke="url(#v-coche)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 34 L25 50 L55 13" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="translate(-1 -3)"/>
+        </svg>
+      </button>
+        </div>
+        <div class="message" id="message"></div>
+      </div>
+      <div class="grille-box" id="grille-box"><div class="grille" id="grille"></div></div>
+    </div>
+  </div>
+
+  <div class="vue" id="v-reglages" hidden>
+    <div class="corps">
+      <h2>Paramètres</h2>
+      <div id="r-liste" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+    <div class="bas"><button class="btn ok nav" id="ok-reglages" type="button" aria-label="OK" data-parle="OK">OK</button></div>
+  </div>
+
+  <div class="vue" id="v-perso" hidden>
+    <div class="corps">
+      <h2>Tournoi</h2>
+      <div id="p-liste" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
+    <div class="bas"><button class="btn ok nav" id="ok-perso" type="button" aria-label="OK" data-parle="OK">OK</button></div>
+  </div>
+
+  <div class="vue" id="v-fin" hidden>
+    <div class="corps">
+      <div class="liste" id="liste-fin"></div>
+      <div class="gagnant nav" id="gagnant" tabindex="0" role="group"></div>
+      <div class="liste" id="liste-cumul"></div>
+      <div class="info-fin nav" id="info-fin" tabindex="0" role="group" hidden></div>
+    </div>
+    <div class="bas"><button class="btn ok nav" id="ok-fin" type="button" aria-label="OK" data-parle="OK">OK</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const rnd = (n) => Math.floor(Math.random() * n);
+  const RAPIDE = !!window.__rapide;
+  const reduit = RAPIDE || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  /* Chaque élément garde son propre écouteur : c'est ce qui permet au bouton OK du SensePlayer de l'activer. */
+  function surClic(el, fn) { el.addEventListener('click', fn); }
+  const attendre = (ms) => (RAPIDE ? Promise.resolve() : new Promise(function (r) { setTimeout(r, ms); }));
+
+  /* =====================================================================
+     SONS (synthèse Web Audio)
+     ===================================================================== */
+  let AC = null, master = null, noiseBuf = null, fxIn = null;
+  const suivis = [];
+  function ac() {
+    if (!AC) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      AC = new C();
+      const comp = AC.createDynamicsCompressor();
+      master = AC.createGain();
+      master.gain.value = 0.9;
+      master.connect(comp);
+      comp.connect(AC.destination);
+      noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+      if (natif()) {
+        ['createGain', 'createBiquadFilter', 'createStereoPanner', 'createOscillator', 'createBufferSource'].forEach(function (k) {
+          if (!AC[k]) return;
+          const f = AC[k].bind(AC);
+          AC[k] = function () { const n = f.apply(null, arguments); suivis.push(n); return n; };
+        });
+      }
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      if (AC.createConvolver && !natif()) {
+        const conv = AC.createConvolver();
+        const len = Math.floor(AC.sampleRate * (natif() ? 0.8 : 1.5));
+        const ir = AC.createBuffer(2, len, AC.sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+          const c2 = ir.getChannelData(ch);
+          for (let i = 0; i < len; i++) c2[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+        }
+        conv.buffer = ir;
+        fxIn = AC.createGain();
+        const wet = AC.createGain();
+        wet.gain.value = 0.3;
+        fxIn.connect(conv); conv.connect(wet); wet.connect(master);
+      }
+    }
+    if (AC.state === 'suspended') AC.resume();
+    return AC;
+  }
+  function jouer(fn, arg) {
+    if (RAPIDE) return;
+    try {
+      ac();
+      const d0 = suivis.length;
+      fn(arg);
+      if (suivis.length > d0) {
+        const lot = suivis.splice(d0);
+        setTimeout(function () { lot.forEach(function (n) { try { n.disconnect(); } catch (e) { /* rien */ } }); }, 12000);
+      }
+    } catch (e) { /* son indisponible */ }
+  }
+  function env(g, t, a, peak, dur) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  }
+  function sendFx(node, amount) {
+    if (!fxIn) return;
+    const s = AC.createGain();
+    s.gain.value = amount;
+    node.connect(s); s.connect(fxIn);
+  }
+  function noiseHit(t, f, q, peak, dur) {
+    const s = AC.createBufferSource();
+    s.buffer = noiseBuf;
+    const bp = AC.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+    const g = AC.createGain();
+    env(g, t, 0.002, peak, dur);
+    s.connect(bp); bp.connect(g); g.connect(master);
+    s.start(t, Math.random() * 0.5, dur + 0.02);
+  }
+  function tone(t, f0, f1, type, peak, dur, a, wet) {
+    const o = AC.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    const g = AC.createGain();
+    env(g, t, a || 0.005, peak, dur);
+    o.connect(g); g.connect(master);
+    if (wet) sendFx(g, wet);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function toc(t, f0, f1, peak, dur) { tone(t, f0, f1, 'sine', peak, dur, 0.003); }
+  function midiHz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+  function sortie(pan, dest) {
+    dest = dest || master;
+    if (AC.createStereoPanner) {
+      const p = AC.createStereoPanner();
+      p.pan.value = Math.max(-1, Math.min(1, pan));
+      p.connect(dest);
+      return p;
+    }
+    return dest;
+  }
+  function impact(t, a, pan, brillance) {
+    const out = sortie(pan);
+    const s = AC.createBufferSource();
+    s.buffer = noiseBuf;
+    const bp = AC.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = (1500 + Math.random() * 2500) * brillance;
+    bp.Q.value = 0.9;
+    const g = AC.createGain();
+    env(g, t, 0.0015, a, 0.02 + Math.random() * 0.02);
+    s.connect(bp); bp.connect(g); g.connect(out);
+    s.start(t, Math.random() * 0.5, 0.06);
+    const o = AC.createOscillator();
+    o.type = 'sine';
+    const f = (320 + Math.random() * 500) * (brillance > 1.2 ? 1.6 : 1);
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * 0.6, t + 0.05);
+    const g2 = AC.createGain();
+    env(g2, t, 0.001, a * 0.7, 0.05);
+    o.connect(g2); g2.connect(out);
+    o.start(t); o.stop(t + 0.07);
+  }
+  function piano(t, midi, vel, dur) {
+    const f = midiHz(midi);
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = Math.min(9000, 1200 + f * 3 + vel * 3000);
+    lp.Q.value = 0.4;
+    const mix = AC.createGain();
+    mix.gain.value = 0.2;
+    mix.connect(lp); lp.connect(master); sendFx(lp, 0.5);
+    const partiels = [];
+    for (let k = 1; k <= 6; k++) {
+      const fk = f * k * Math.sqrt(1 + 0.0004 * k * k);
+      if (fk < 12000) partiels.push([fk, vel / Math.pow(k, 1.15), dur / (1 + 0.55 * (k - 1))]);
+    }
+    partiels.push([f * 1.0018, vel * 0.5, dur]);
+    partiels.forEach(function (p) {
+      const o = AC.createOscillator();
+      o.type = 'sine'; o.frequency.value = p[0];
+      const g = AC.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(p[1], t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + p[2]);
+      o.connect(g); g.connect(mix);
+      o.start(t); o.stop(t + p[2] + 0.05);
+    });
+    noiseHit(t, Math.min(5000, f * 4), 1.2, 0.05 * vel, 0.02);
+  }
+  /* Lancer : arpège descendant au piano, une note par dé lancé. */
+  function sonLancer(n) {
+    const t = AC.currentTime + 0.02;
+    const gamme = [91, 88, 84, 79, 76, 72];
+    for (let i = 0; i < n; i++) {
+      const dernier = i === n - 1;
+      piano(t + i * 0.085, gamme[i], 0.95 - 0.35 * (i / 5), dernier ? 1.8 : 1.1);
+    }
+  }
+  function cuivre(t, midi, vel, dur) {
+    const f = midiHz(midi);
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass'; lp.Q.value = 1;
+    lp.frequency.setValueAtTime(500, t);
+    lp.frequency.linearRampToValueAtTime(2800, t + Math.min(0.12, dur * 0.4));
+    lp.frequency.linearRampToValueAtTime(1500, t + dur);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vel * 0.22, t + 0.03);
+    g.gain.setValueAtTime(vel * 0.22, t + Math.max(0.04, dur - 0.12));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    [0, 7, -7].forEach(function (c) {
+      const o = AC.createOscillator();
+      o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = c;
+      o.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+    });
+    lp.connect(g); g.connect(master); sendFx(g, 0.4);
+  }
+  function carillon(t, midi, vel, dur) {
+    const f = midiHz(midi);
+    [[1, 1, dur], [2.76, 0.4, dur * 0.5], [5.4, 0.2, dur * 0.25]].forEach(function (p) {
+      tone(t, f * p[0], f * p[0], 'sine', vel * 0.3 * p[1], p[2], 0.002, 0.5);
+    });
+  }
+  function harpe(t, midi, vel, dur) {
+    const f = midiHz(midi);
+    tone(t, f, f, 'triangle', vel * 0.3, dur, 0.002, 0.45);
+    tone(t, f * 2, f * 2, 'sine', vel * 0.1, dur * 0.5, 0.002, 0.3);
+    noiseHit(t, Math.min(6000, f * 3), 2, vel * 0.04, 0.012);
+  }
+  function sonVictoire() {
+    const t = AC.currentTime + 0.05;
+    [[67, 0, 0.14], [72, 0.15, 0.14], [76, 0.3, 0.14], [79, 0.45, 0.5], [76, 1.0, 0.14], [79, 1.15, 0.14], [84, 1.3, 1.7]].forEach(function (n) {
+      cuivre(t + n[1], n[0], 0.9, n[2]);
+    });
+    [60, 64, 67, 72].forEach(function (m) { cuivre(t + 1.3, m, 0.55, 1.7); });
+    [[0.45, 0.8], [1.3, 1.0]].forEach(function (p) {
+      toc(t + p[0], 110, 50, p[1] * 0.8, 0.35);
+      noiseHit(t + p[0], 250, 0.8, 0.3, 0.1);
+    });
+    noiseHit(t + 1.3, 8000, 1.0, 0.1, 0.45);
+  }
+  function sonGarder() {
+    const t = AC.currentTime + 0.01;
+    tone(t, 640, 300, 'sine', 0.5, 0.09);
+    noiseHit(t, 3200, 3, 0.25, 0.03);
+  }
+  function trombone(t, f0, f1, dur, vib) {
+    const o = AC.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.linearRampToValueAtTime(f1, t + dur);
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(700, t);
+    lp.frequency.linearRampToValueAtTime(1300, t + dur * 0.3);
+    lp.frequency.linearRampToValueAtTime(600, t + dur);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.35, t + 0.04);
+    g.gain.setValueAtTime(0.35, t + dur - 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    if (vib) {
+      const l = AC.createOscillator();
+      l.frequency.value = 6;
+      const lg = AC.createGain();
+      lg.gain.value = 8;
+      l.connect(lg); lg.connect(o.frequency);
+      l.start(t); l.stop(t + dur + 0.05);
+    }
+    o.connect(lp); lp.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function sonFarkle() {
+    let x = AC.currentTime + 0.02;
+    [[311, 0.32], [294, 0.32], [277, 0.32]].forEach(function (n) {
+      trombone(x, n[0], n[0], n[1] * 0.95, false);
+      x += n[1];
+    });
+    trombone(x, 262, 208, 0.95, true);
+  }
+  function sonTousGardes() {
+    const t = AC.currentTime + 0.02;
+    const g = [72, 74, 76, 79, 81, 84, 86, 88, 91, 93, 96];
+    g.forEach(function (m, i) { harpe(t + i * 0.055, m, 0.7 + 0.3 * i / (g.length - 1), 0.9); });
+    const tf = t + g.length * 0.055;
+    [84, 88, 91, 96].forEach(function (m, i) { harpe(tf + i * 0.02, m, 0.9, 2.0); });
+    carillon(tf, 103, 0.6, 1.5);
+  }
+  function sonStop() {
+    const t = AC.currentTime + 0.02;
+    const s = AC.createBufferSource();
+    s.buffer = noiseBuf; s.loop = true;
+    const bp = AC.createBiquadFilter();
+    bp.type = 'bandpass'; bp.Q.value = 2.5;
+    bp.frequency.setValueAtTime(300, t);
+    bp.frequency.exponentialRampToValueAtTime(5500, t + 0.45);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.43);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    s.connect(bp); bp.connect(g); g.connect(master);
+    s.start(t); s.stop(t + 0.55);
+    const tf = t + 0.45;
+    toc(tf, 140, 50, 0.8, 0.3);
+    noiseHit(tf, 6000, 1.5, 0.35, 0.08);
+    [84, 88, 91, 96].forEach(function (m) {
+      tone(tf, midiHz(m), midiHz(m), 'triangle', 0.2, 0.7, 0.003, 0.4);
+    });
+    for (let i = 0; i < 8; i++) noiseHit(tf + 0.05 + i * 0.04, 8000, 6, 0.05, 0.05);
+  }
+  function sonButee() { const t = AC.currentTime + 0.01; tone(t, 220, 180, 'sine', 0.25, 0.1); }
+
+  /* =====================================================================
+     NOUVEAUX SONS DU YAM
+     ===================================================================== */
+  function balayage(t, f0, f1, peak, dur, q) {
+    const s = AC.createBufferSource();
+    s.buffer = noiseBuf;
+    const bp = AC.createBiquadFilter();
+    bp.type = 'bandpass'; bp.Q.value = q || 2;
+    bp.frequency.setValueAtTime(f0, t);
+    bp.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    const g = AC.createGain();
+    env(g, t, 0.02, peak, dur);
+    s.connect(bp); bp.connect(g); g.connect(master);
+    s.start(t, Math.random() * 0.4, dur + 0.05);
+  }
+  function cloche(t, f, peak, dur) {
+    [1, 2.76, 5.4, 8.93].forEach(function (m, i) { tone(t, f * m, f * m, 'sine', peak / (1 + i * 1.6), dur / (1 + i * 0.5), 0.002, 0.3); });
+  }
+
+  /* --- Bips : points marqués --- */
+  function bipA() { const t = AC.currentTime + 0.01; tone(t, 1175, 1175, 'sine', 0.32, 0.12, 0.002); tone(t + 0.1, 1568, 1568, 'sine', 0.32, 0.28, 0.002, 0.3); }
+  function bipB() { const t = AC.currentTime + 0.01; tone(t, 880, 880, 'triangle', 0.4, 0.28, 0.002); tone(t, 3520, 3480, 'sine', 0.09, 0.09, 0.001); noiseHit(t, 5000, 1.5, 0.06, 0.02); }
+  function bipC() { const t = AC.currentTime + 0.01; noiseHit(t, 6000, 1.2, 0.2, 0.015); cloche(t + 0.01, 1046, 0.34, 0.7); }
+
+  /* --- Joker : apparition --- */
+  function jokerA() {
+    const t = AC.currentTime + 0.01;
+    [84, 88, 91, 96, 100, 103].forEach(function (m, i) { tone(t + i * 0.045, midiHz(m), midiHz(m), 'triangle', 0.2, 0.35, 0.003, 0.4); });
+    cloche(t + 0.3, 2093, 0.18, 0.9);
+    for (let i = 0; i < 8; i++) noiseHit(t + 0.1 + i * 0.05, 9000, 8, 0.04, 0.04);
+  }
+  function jokerB() {
+    const t = AC.currentTime + 0.01;
+    cuivre(t, 67, 0.8, 0.18);
+    cuivre(t + 0.2, 72, 0.9, 0.55);
+  }
+  function jokerC() {
+    const t = AC.currentTime + 0.01;
+    tone(t, 220, 880, 'sine', 0.35, 0.22, 0.01);
+    tone(t + 0.02, 224, 884, 'triangle', 0.12, 0.22, 0.01);
+    [96, 93, 91, 88].forEach(function (m, i) { tone(t + 0.22 + i * 0.07, midiHz(m), midiHz(m), 'triangle', 0.2, 0.3, 0.002, 0.3); });
+  }
+
+  /* --- Yam : son « joker B » --- */
+  function sonYam() { sonTousGardes(); }
+
+  /* --- Dé de bataille : croix (points perdus) --- */
+  function croixA() { const t = AC.currentTime + 0.01; tone(t, 150, 95, 'sawtooth', 0.32, 0.5, 0.01); tone(t, 158, 100, 'square', 0.16, 0.5, 0.01); }
+  function croixB() { const t = AC.currentTime + 0.01; tone(t, 233, 196, 'sawtooth', 0.28, 0.3, 0.02); tone(t + 0.33, 208, 117, 'sawtooth', 0.28, 0.6, 0.02); }
+  function croixC() { const t = AC.currentTime + 0.01; tone(t, 196, 196, 'sawtooth', 0.22, 0.45, 0.005); tone(t, 277, 277, 'sawtooth', 0.22, 0.45, 0.005); toc(t, 120, 50, 0.7, 0.3); noiseHit(t, 400, 1, 0.2, 0.15); }
+
+  /* --- Dé de bataille : épées (attaque) --- */
+  function epeesA() {
+    const t = AC.currentTime + 0.01;
+    noiseHit(t, 4500, 2, 0.5, 0.06); noiseHit(t, 7500, 3, 0.35, 0.05);
+    [1800, 2750, 4100].forEach(function (f, i) { tone(t, f, f, 'sine', 0.22 / (1 + i), 0.6 / (1 + i * 0.5), 0.001, 0.3); });
+    toc(t, 200, 90, 0.4, 0.15);
+  }
+  function epeesB() {
+    const t = AC.currentTime + 0.01;
+    balayage(t, 1500, 9000, 0.35, 0.3, 3);
+    const tc = t + 0.28;
+    noiseHit(tc, 5000, 2, 0.45, 0.05);
+    [2200, 3300].forEach(function (f, i) { tone(tc, f, f, 'sine', 0.2 / (1 + i), 0.7, 0.001, 0.3); });
+  }
+  function epeesC() {
+    const t = AC.currentTime + 0.01;
+    [0, 0.13].forEach(function (d, k) {
+      noiseHit(t + d, 5500 - k * 1500, 2.5, 0.42, 0.05);
+      [2000 + k * 600, 3100 + k * 700].forEach(function (f, i) { tone(t + d, f, f, 'sine', 0.2 / (1 + i), 0.4, 0.001, 0.3); });
+    });
+  }
+
+  /* --- Dé de bataille : cœur (points gagnés) --- */
+  function coeurA() { const t = AC.currentTime + 0.01; [79, 83, 86].forEach(function (m, i) { tone(t + i * 0.09, midiHz(m), midiHz(m), 'triangle', 0.26, 0.7, 0.004, 0.4); }); }
+  function coeurB() {
+    const t = AC.currentTime + 0.01;
+    toc(t, 90, 55, 0.8, 0.2); toc(t + 0.2, 80, 50, 0.7, 0.25);
+    tone(t + 0.45, midiHz(88), midiHz(88), 'sine', 0.22, 0.9, 0.005, 0.4); tone(t + 0.5, midiHz(95), midiHz(95), 'sine', 0.14, 0.9, 0.005, 0.4);
+  }
+  function coeurC() { const t = AC.currentTime + 0.01; [72, 76, 79, 84, 88, 91].forEach(function (m, i) { piano(t + i * 0.07, m, 0.85 - i * 0.05, 1.3); }); }
+
+  /* Sons utilisés dans le jeu (les variantes A sont provisoires, en attendant ton choix). */
+  function croixE() { const t = AC.currentTime + 0.01; tone(t, 220, 220, 'square', 0.2, 0.12, 0.003); tone(t + 0.17, 220, 220, 'square', 0.2, 0.12, 0.003); tone(t + 0.34, 147, 147, 'square', 0.22, 0.4, 0.003); toc(t + 0.34, 110, 45, 0.6, 0.3); }
+  function epeesE() { const t = AC.currentTime + 0.01; balayage(t, 1500, 8000, 0.3, 0.22, 3); balayage(t + 0.2, 8000, 1500, 0.3, 0.22, 3); const tc = t + 0.45; noiseHit(tc, 5000, 2, 0.5, 0.06); [1900, 2900, 4300].forEach(function (f, i) { tone(tc, f, f, 'sine', 0.22 / (1 + i), 0.8 / (1 + i * 0.4), 0.001, 0.3); }); }
+  const SON = { bip: bipA, joker: jokerA, croix: croixE, epees: epeesE, coeur: coeurA };
+
+  /* =====================================================================
+     RÉGLAGES (mémorisés dans le navigateur)
+     ===================================================================== */
+  const NIVEAUX = ['Débutant', 'Intermédiaire', 'Pro', 'Expert'];
+  const CLE = 'yam-reglages-v2';
+  const MODES = ['rapide', 'standard', 'bataille'];
+  const MODES_ALL = ['rapide', 'standard', 'bataille', 'defi', 'tournoi'];
+  const MODE_TXT = { rapide: 'Classique', standard: 'Avancé', bataille: 'Bataille', defi: 'Défi', tournoi: 'Tournoi' };
+  const PV_CHOIX = [100, 200, 300, 500];
+  const reg = {
+    nb: 2,
+    voix: true,
+    cadres: true,
+    mode: 'rapide',
+    joker: false,
+    pv: 200,
+    etape: 0,
+    perso: [{ mode: 'rapide', joker: false }, { mode: 'standard', joker: false }, { mode: 'rapide', joker: true }],
+    joueurs: [
+      { type: 'humain', niveau: 'Intermédiaire', nom: 'Vanessa' },
+      { type: 'robot', niveau: 'Intermédiaire', nom: '' },
+      { type: 'robot', niveau: 'Intermédiaire', nom: '' },
+      { type: 'robot', niveau: 'Intermédiaire', nom: '' }
+    ]
+  };
+  (function charger() {
+    try {
+      const s = JSON.parse(localStorage.getItem(CLE));
+      if (!s) return;
+      if (s.nb >= 1 && s.nb <= 4) reg.nb = s.nb | 0;
+      if (typeof s.voix === 'boolean') reg.voix = s.voix;
+      if (typeof s.cadres === 'boolean') reg.cadres = s.cadres;
+      if (typeof s.joker === 'boolean') reg.joker = s.joker;
+      if (MODES_ALL.indexOf(s.mode) >= 0) reg.mode = s.mode;
+      if (PV_CHOIX.indexOf(s.pv) >= 0) reg.pv = s.pv;
+      if (s.etape >= 0 && s.etape < 20) reg.etape = s.etape | 0;
+      if (Array.isArray(s.perso)) reg.perso = s.perso.slice(0, 8).filter(function (p) { return p && MODES.indexOf(p.mode) >= 0; }).map(function (p) { return { mode: p.mode, joker: !!p.joker }; });
+      if (Array.isArray(s.joueurs)) {
+        s.joueurs.slice(0, 4).forEach(function (p, i) {
+          if (p && (p.type === 'humain' || p.type === 'robot')) reg.joueurs[i].type = p.type;
+          if (p && NIVEAUX.indexOf(p.niveau) >= 0) reg.joueurs[i].niveau = p.niveau;
+          if (p && typeof p.nom === 'string') reg.joueurs[i].nom = p.nom.slice(0, 14);
+        });
+      }
+    } catch (e) { /* réglages par défaut */ }
+  })();
+  function sauver() { try { localStorage.setItem(CLE, JSON.stringify(reg)); } catch (e) { /* tant pis */ } }
+
+  /* La partie en cours (copie des réglages, ou configuration imposée par un tournoi). */
+  const P = { mode: 'rapide', joker: false, pv: 200, nb: 2, joueurs: reg.joueurs, tournoi: null };
+
+  const affNiv = (n) => (n === 'Intermédiaire' ? 'Initié' : n);
+  function nomDe(liste, i) {
+    const p = liste[i], t = p.type;
+    if (t === 'humain' && p.nom) return p.nom;
+    let n = 0, total = 0;
+    for (let k = 0; k < liste.length; k++) {
+      const m = liste[k];
+      if (m.type === t && (t !== 'robot' || m.niveau === p.niveau)) { total++; if (k <= i) n++; }
+    }
+    const base = t === 'robot' ? affNiv(p.niveau) : 'Joueur';
+    return base + ' ' + n;
+  }
+  const nom = (i) => nomDe(P.joueurs.slice(0, P.nb), i);
+  const nomReg = (i) => (i < reg.nb ? nomDe(reg.joueurs.slice(0, reg.nb), i) : '');
+  const nombre = (n) => (n < 0 ? 'moins ' + (-n) : String(n));
+  const pts = (n) => nombre(n) + (Math.abs(n) > 1 ? ' points' : ' point');
+  const plur = (n) => (n > 1 ? 's' : '');
+
+  /* =====================================================================
+     VOIX (synthèse vocale du navigateur)
+     ===================================================================== */
+  const synthOk = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+  let voixFr = null;
+  /* Dans l'application Android, la voix de l'appareil est appelée directement (pont AndroidTTS). */
+  const natif = function () { try { return typeof window.AndroidTTS !== 'undefined' && window.AndroidTTS.pret() === true; } catch (e) { return false; } };
+  /* Si un lecteur d'écran est actif sur l'appareil, il lit déjà l'élément actif : le jeu ne le répète pas
+     et passe ses annonces par ce même lecteur (une seule voix). */
+  const lecteur = function () { try { return natif() && window.AndroidTTS.lecteur() === true; } catch (e) { return false; } };
+  let ttsId = 0;
+  const ttsAttente = {};
+  window.__ttsFin = function (id) { const f = ttsAttente[id]; if (f) { delete ttsAttente[id]; f(); } };
+  function chargerVoix() {
+    if (!synthOk) return;
+    const l = (speechSynthesis.getVoices() || []).filter(function (v) { return /^fr/i.test(v.lang); });
+    voixFr = l.filter(function (v) { return /^fr[-_]FR/i.test(v.lang); })[0] || l[0] || null;
+  }
+  if (synthOk) {
+    chargerVoix();
+    if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', chargerVoix);
+    else speechSynthesis.onvoiceschanged = chargerVoix;
+  }
+  function estimer(t) {
+    const morceaux = String(t).split(/[\s,.;:!?]+/).filter(Boolean);
+    let ms = 450;
+    morceaux.forEach(function (m) { ms += 380 + 50 * m.length; });
+    ms += 200 * (String(t).match(/[,.;:!?]/g) || []).length;
+    return Math.round(ms * 1.1);
+  }
+  /* Lit un texte. Rend une promesse qui se termine quand la lecture est finie (ou interrompue). */
+  /* Prononciation : certains mots sont écrits autrement pour la voix seulement (l'écran ne change pas). */
+  function prononce(t) {
+    const MOTS = ['', 'un', 'deux', 'trois', 'quatre'];
+    /* Le prénom est écrit autrement pour la voix seulement (l'écran ne change pas). */
+    const texte = String(t).replace(/Vanessa/gi, 'Va nessa');
+    return texte
+      .replace(/(Joueur|Débutant|Initié|Pro|Expert|participant|Participant) ([1-4])(?![0-9])/g, function (m, a, n) { return a + ' ' + MOTS[+n]; });
+  }
+  function dire(texte, opt) {
+    opt = opt || {};
+    texte = prononce(texte || '');
+    return new Promise(function (resolve) {
+      if (RAPIDE || (!synthOk && !natif()) || !texte || (!reg.voix && !opt.force)) {
+        if (!RAPIDE && !opt.court) { setTimeout(resolve, 350); } else resolve();
+        return;
+      }
+      let fini = false;
+      const fin = function () { if (!fini) { fini = true; resolve(); } };
+      try {
+        if (natif()) {
+          const id = String(++ttsId);
+          ttsAttente[id] = fin;
+          window.AndroidTTS.speak(texte, id, !!opt.ajouter);
+          setTimeout(fin, lecteur() ? estimer(texte) : 1800 + texte.length * 110);
+          return;
+        }
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(texte);
+        u.lang = 'fr-FR';
+        if (voixFr) u.voice = voixFr;
+        u.onend = fin; u.onerror = fin;
+        setTimeout(function () { try { speechSynthesis.speak(u); } catch (e) { fin(); } }, 30);
+        setTimeout(fin, 1800 + texte.length * 110);
+      } catch (e) { fin(); }
+    });
+  }
+  function taire() { if (natif()) { try { window.AndroidTTS.stop(); } catch (e) { /* rien */ } return; } if (synthOk) { try { speechSynthesis.cancel(); } catch (e) { /* rien */ } } }
+  function lab(el, texte) {
+    el.setAttribute('data-parle', texte);
+    el.setAttribute('aria-label', prononce(texte));
+  }
+
+  /* =====================================================================
+     RÈGLES DU YAM
+     Cases : 1 à 6, chance, maxi, mini (mode standard), brelan, carré, full, petite suite, grande suite, yam.
+     ===================================================================== */
+  const NB_DES = 5;
+  const CH = 6, MAXI = 7, MINI = 8, BR = 9, CA = 10, FU = 11, PS = 12, GS = 13, YA = 14, PA = 15, DP = 16;
+  const LIB = ['Les 1', 'Les 2', 'Les 3', 'Les 4', 'Les 5', 'Les 6', 'Chance', 'Maxi', 'Mini', 'Brelan', 'Carré', 'Full', 'Petite suite', 'Grande suite', 'Yam', '1 paire', '2 paires'];
+  const PARLE = ['Les un', 'Les deux', 'Les trois', 'Les quatre', 'Les cinq', 'Les six', 'Chance', 'Maxi', 'Mini', 'Brelan', 'Carré', 'Full', 'Petite suite', 'Grande suite', 'Yam', 'Une paire', 'Deux paires'];
+  /* Points moyens qu'une case rapporte quand on la remplit bien : sert aux robots à ne pas gaspiller. */
+  const MOYENNES = [2.1, 5.3, 8.6, 12.1, 15.7, 19.2, 22.0, 22.0, 20.0, 21.7, 13.1, 22.6, 29.5, 32.7, 16.9, 10.0, 14.0];
+  const COLS = ['Libre', 'Montante', 'Descendante'];
+  const PROB_JOKER = 0.05;
+
+  const comptesDe = (vals) => { const c = [0, 0, 0, 0, 0, 0, 0]; vals.forEach(function (v) { c[v]++; }); return c; };
+  const somme = (c) => { let s = 0; for (let v = 1; v <= 6; v++) s += v * c[v]; return s; };
+  const plusGros = (c) => { let m = 0; for (let v = 1; v <= 6; v++) if (c[v] > m) m = c[v]; return m; };
+  const estYam = (c) => plusGros(c) === 5;
+  function scoreC(k, c) {
+    const max = plusGros(c), s = somme(c);
+    if (k < 6) return (k + 1) * c[k + 1];
+    switch (k) {
+      case BR: return max >= 3 ? s : 0;
+      case CA: return max >= 4 ? s : 0;
+      case FU: return (c.indexOf(3) > 0 && c.indexOf(2) > 0) ? 25 : 0;
+      case PS: return ((c[1] && c[2] && c[3] && c[4]) || (c[2] && c[3] && c[4] && c[5]) || (c[3] && c[4] && c[5] && c[6])) ? 30 : 0;
+      case GS: return ((c[1] && c[2] && c[3] && c[4] && c[5]) || (c[2] && c[3] && c[4] && c[5] && c[6])) ? 40 : 0;
+      case YA: return max === 5 ? 50 : 0;
+      case PA: { for (let v = 6; v >= 1; v--) if (c[v] >= 2) return 2 * v; return 0; }
+      case DP: { const f = []; for (let v = 6; v >= 1; v--) { if (c[v] >= 4) f.push(v, v); else if (c[v] >= 2) f.push(v); } return f.length >= 2 ? 2 * (f[0] + f[1]) : 0; }
+      default: return s; /* chance, maxi, mini : somme des dés */
+    }
+  }
+  /* Valeur utilisée par les robots : le mini est meilleur quand la somme est petite. */
+  const valR = (k, c) => (k === MINI ? 30 - somme(c) : scoreC(k, c));
+
+  function descr(vals) {
+    const c = comptesDe(vals);
+    let max = 0, face = 0, paires = 0, fp = 0;
+    for (let v = 1; v <= 6; v++) { if (c[v] >= max) { max = c[v]; face = v; } if (c[v] === 2) { paires++; fp = v; } }
+    if (max === 5) return 'Yam de ' + face;
+    if (scoreC(GS, c)) return 'Grande suite';
+    if (scoreC(PS, c)) return 'Petite suite';
+    if (scoreC(FU, c)) return 'Full';
+    if (max === 4) return 'Carré de ' + face;
+    if (max === 3) return 'Brelan de ' + face;
+    if (paires === 2) return 'Double paire';
+    if (paires === 1) return 'Paire de ' + fp;
+    return 'Aucune figure';
+  }
+
+  /* ---------- Structure d'une fiche ---------- */
+  const colonnes = () => (P.mode === 'standard' ? COLS : ['']);
+  const idsCases = () => (P.mode === 'standard' ? [0, 1, 2, 3, 4, 5, 7, 8, 6, 15, 16, 9, 10, 11, 12, 13, 14] : [0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14]);
+  const nbCasesTotal = () => idsCases().length * colonnes().length;
+  function nouvelleFiche() {
+    return {
+      cols: colonnes().map(function () { return { v: new Array(17).fill(null), bonus: 0 }; }),
+      pv: P.pv, cd: new Array(17).fill(4), elim: false
+    };
+  }
+  /* La case k de la colonne c peut-elle être jouée maintenant ? */
+  function jouable(F, c, k) {
+    if (P.mode === 'bataille') return !F.elim && F.cd[k] >= 4;
+    const v = F.cols[c].v;
+    if (v[k] !== null) return false;
+    if (P.mode === 'standard' && c > 0) {
+      const reste = idsCases().filter(function (x) { return v[x] === null; });
+      return c === 1 ? k === reste[reste.length - 1] : k === reste[0];
+    }
+    return true;
+  }
+  const premiereCase = (F, c) => { const l = idsCases().filter(function (k) { return jouable(F, c, k); }); return l.length ? l[0] : null; };
+  const colonneOuverte = (F, c) => premiereCase(F, c) !== null;
+  /* Un yam peut compter pour une case du bas quand le yam est déjà marqué dans la colonne. */
+  const yamJoker = (F, c, cc) => P.mode !== 'bataille' && estYam(cc) && F.cols[c].v[YA] === 50;
+  function scoreCase(F, c, k, vals) {
+    const cc = comptesDe(vals);
+    if (k >= CH && yamJoker(F, c, cc)) { if (k === FU) return 25; if (k === PS) return 30; if (k === GS) return 40; }
+    return scoreC(k, cc);
+  }
+  function calcCol(F, c) {
+    const v = F.cols[c].v;
+    let haut = 0, bas = 0;
+    for (let k = 0; k < 6; k++) if (v[k] !== null) haut += v[k];
+    [CH, PA, DP, BR, CA, FU, PS, GS, YA].forEach(function (k) { if (v[k] !== null) bas += v[k]; });
+    const diff = (v[MAXI] !== null && v[MINI] !== null) ? v[MAXI] - v[MINI] : null;
+    const bonus = F.cols[c].bonus * 100;
+    const p35 = haut >= 63 ? 35 : 0, p100 = haut >= 84 ? 100 : 0;
+    const hautTot = haut + p35 + p100;
+    const basTot = bas + (diff || 0) + bonus;
+    return { haut: haut, p35: p35, p100: p100, hautTot: hautTot, diff: diff, bonus: bonus, bas: basTot, total: hautTot + basTot };
+  }
+  function scoreFiche(F) {
+    if (P.mode === 'bataille') return F.pv;
+    let t = 0;
+    for (let c = 0; c < F.cols.length; c++) t += calcCol(F, c).total;
+    return t;
+  }
+
+  /* =====================================================================
+     ROBOTS
+     Débutant : garde les dés les plus fréquents, se trompe souvent. Initié : même idée, mais il évite de gaspiller
+     les bonnes cases. Pro : calcule le meilleur choix en tenant compte des lancers restants. Expert : comme Pro,
+     et il vise aussi les primes du haut.
+     ===================================================================== */
+  function contexte(niveau, F) {
+    const set = {};
+    for (let c = 0; c < F.cols.length; c++) idsCases().forEach(function (k) { if (jouable(F, c, k)) set[k] = true; });
+    const dispo = Object.keys(set).map(Number);
+    let kb = 0;
+    if (niveau === 'Expert' && P.mode !== 'bataille' && F.cols.length === 1) {
+      const t = calcCol(F, 0);
+      if (t.haut < 63) {
+        let maxi = t.haut;
+        for (let k = 0; k < 6; k++) if (F.cols[0].v[k] === null) maxi += 5 * (k + 1);
+        if (maxi >= 63) kb = 2;
+      }
+    }
+    const bat = P.mode === 'bataille';
+    return {
+      dispo: dispo,
+      adj: function (k, s) { return (s - MOYENNES[k] + (k < 6 ? kb * (s - 3 * (k + 1)) : 0)) * (bat && k === CH ? 0.35 : 1); },
+      memo: [new Map(), new Map(), new Map()]
+    };
+  }
+  const cle = (c) => c[1] + 6 * c[2] + 36 * c[3] + 216 * c[4] + 1296 * c[5] + 7776 * c[6];
+  const SORTIES = {};
+  function sorties(k) {
+    if (SORTIES[k]) return SORTIES[k];
+    const fact = [1, 1, 2, 6, 24, 120], res = [];
+    (function rec(f, reste, c) {
+      if (f === 6) {
+        c[6] = reste;
+        let p = fact[k];
+        for (let v = 1; v <= 6; v++) p /= fact[c[v]];
+        res.push({ c: c.slice(), p: p / Math.pow(6, k) });
+        return;
+      }
+      for (let n = 0; n <= reste; n++) { c[f] = n; rec(f + 1, reste - n, c); }
+      c[f] = 0;
+    })(1, k, [0, 0, 0, 0, 0, 0, 0]);
+    SORTIES[k] = res;
+    return res;
+  }
+  function tenues(c, f, cur, fn) {
+    if (f > 6) { fn(cur); return; }
+    for (let n = 0; n <= c[f]; n++) { cur[f] = n; tenues(c, f + 1, cur, fn); }
+    cur[f] = 0;
+  }
+  function VR(r, c, ctx) {
+    const key = cle(c), memo = ctx.memo[r];
+    if (memo.has(key)) return memo.get(key);
+    let fin = -1e9;
+    ctx.dispo.forEach(function (k) { const a = ctx.adj(k, valR(k, c)); if (a > fin) fin = a; });
+    let val = fin;
+    if (r > 0) { const m = meilleureTenue(r, c, ctx).val; if (m > val) val = m; }
+    memo.set(key, val);
+    return val;
+  }
+  function meilleureTenue(r, c, ctx) {
+    let best = -1e9, bestH = null, bestN = -1;
+    tenues(c, 1, [0, 0, 0, 0, 0, 0, 0], function (h) {
+      let n = 0;
+      for (let v = 1; v <= 6; v++) n += h[v];
+      const k = 5 - n;
+      let val = 0;
+      if (k === 0) { val = VR(0, h, ctx); }
+      else {
+        const outs = sorties(k);
+        for (let a = 0; a < outs.length; a++) {
+          const o = outs[a];
+          val += o.p * VR(r - 1, [0, h[1] + o.c[1], h[2] + o.c[2], h[3] + o.c[3], h[4] + o.c[4], h[5] + o.c[5], h[6] + o.c[6]], ctx);
+        }
+      }
+      if (val > best + 1e-9 || (Math.abs(val - best) <= 1e-9 && n > bestN)) { best = val; bestH = h.slice(); bestN = n; }
+    });
+    return { val: best, h: bestH };
+  }
+  /* Transforme « garder 2 dés de valeur 3 » en une liste de dés, en préférant ceux déjà gardés. */
+  function desPourTenue(vals, h, deja) {
+    const reste = h.slice(), res = [false, false, false, false, false];
+    [true, false].forEach(function (pass) {
+      vals.forEach(function (v, i) {
+        if (!res[i] && reste[v] > 0 && (!pass || deja[i])) { res[i] = true; reste[v]--; }
+      });
+    });
+    return res;
+  }
+  const plusFrequent = (c) => { let b = 1; for (let v = 1; v <= 6; v++) if (c[v] >= c[b]) b = v; return b; };
+  const aucun = () => [false, false, false, false, false];
+  /* Rend la liste des dés à garder, ou null pour s'arrêter là. */
+  function decider(niveau, vals, restants, F, ctx, deja) {
+    const c = comptesDe(vals);
+    const libre = (k) => ctx.dispo.indexOf(k) >= 0;
+    if (niveau === 'Pro' || niveau === 'Expert') {
+      const arret = VR(0, c, ctx);
+      const mt = meilleureTenue(restants, c, ctx);
+      if (arret >= mt.val - 1e-9) return null;
+      return desPourTenue(vals, mt.h, deja);
+    }
+    if (niveau === 'Débutant') {
+      if (Math.random() < 0.4) return vals.map(function () { return Math.random() < 0.5; });
+      if ((libre(YA) && scoreC(YA, c)) || (libre(GS) && scoreC(GS, c)) || (libre(FU) && scoreC(FU, c))) return null;
+      const v = plusFrequent(c);
+      return c[v] >= 2 ? vals.map(function (x) { return x === v; }) : aucun();
+    }
+    /* Initié */
+    if ((libre(YA) && scoreC(YA, c)) || (libre(GS) && scoreC(GS, c)) || (libre(PS) && scoreC(PS, c)) || (libre(FU) && scoreC(FU, c))) return null;
+    if (libre(PS) || libre(GS)) {
+      for (let s = 1; s <= 3; s++) {
+        if (c[s] && c[s + 1] && c[s + 2] && c[s + 3]) {
+          const vus = {};
+          return vals.map(function (x) { if (x >= s && x <= s + 3 && !vus[x]) { vus[x] = true; return true; } return false; });
+        }
+      }
+    }
+    const v = plusFrequent(c);
+    if (c[v] >= 2) return vals.map(function (x) { return x === v; });
+    const haut = Math.max.apply(null, vals);
+    if (haut < 5) return aucun();
+    let pris = false;
+    return vals.map(function (x) { if (!pris && x === haut) { pris = true; return true; } return false; });
+  }
+  /* Choisit la case (et la colonne) : rend { c, k } ou null. */
+  function choixRobot(niveau, vals, F, ctx) {
+    const cands = [];
+    for (let c = 0; c < F.cols.length; c++) {
+      idsCases().forEach(function (k) {
+        if (!jouable(F, c, k)) return;
+        const s = scoreCase(F, c, k, vals);
+        const sr = k === MINI ? 30 - s : s;
+        let v = niveau === 'Débutant' ? sr - k * 0.001 : ctx.adj(k, sr);
+        if (c > 0) v += 0.0001;
+        cands.push({ c: c, k: k, v: v });
+      });
+    }
+    if (!cands.length) return null;
+    if (niveau === 'Débutant' && Math.random() < 0.3) return cands[rnd(cands.length)];
+    let best = cands[0];
+    cands.forEach(function (x) { if (x.v > best.v) best = x; });
+    return best;
+  }
+  /* Partie solitaire d'un robot en mode rapide (sert aux mesures de force). */
+  function joueSolo(niveau) {
+    const F = nouvelleFiche();
+    for (let t = 0; t < nbCasesTotal(); t++) {
+      const ctx = contexte(niveau, F);
+      let vals = [0, 0, 0, 0, 0].map(function () { return 1 + rnd(6); });
+      let tenus = aucun(), l = 1;
+      while (l < 3) {
+        const h = decider(niveau, vals, 3 - l, F, ctx, tenus);
+        if (!h || h.every(Boolean)) break;
+        vals = vals.map(function (v, i) { return h[i] ? v : 1 + rnd(6); });
+        tenus = h; l++;
+      }
+      const ch = choixRobot(niveau, vals, F, ctx);
+      const s = scoreCase(F, ch.c, ch.k, vals);
+      if (estYam(comptesDe(vals)) && F.cols[ch.c].v[YA] === 50) F.cols[ch.c].bonus++;
+      F.cols[ch.c].v[ch.k] = s;
+    }
+    return scoreFiche(F);
+  }
+
+  /* =====================================================================
+     ÉTAT DE LA PARTIE
+     ===================================================================== */
+  const G = { cur: 0, tour: 1, lancers: 0, fiches: [], enCours: false, busy: false, token: 0, voir: 0, col: 0, cible: null };
+  const erreur = function (e) { if (window.console) console.error(e); };
+  const vivant = (tk) => tk === G.token;
+  const estHumain = (i) => P.joueurs[i].type === 'humain';
+  const tourHumain = () => G.enCours && !G.busy && estHumain(G.cur) && !$('v-partie').hidden;
+  let silence = false;
+  function focusSilencieux(el) { silence = true; try { el.focus(); } finally { silence = false; } }
+  /* Va sur un élément : avec lecteur d'écran, on annonce avant puis on déplace ; sinon on lit l'élément nous-mêmes. */
+  async function allerA(el, texte) {
+    if (!el) return;
+    if (lecteur()) { if (texte) await dire(texte); focusSilencieux(el); }
+    else { focusSilencieux(el); dire((texte ? texte + '. ' : '') + (el.getAttribute('data-parle') || el.textContent.trim())); }
+  }
+  function msg(t) { $('message').textContent = t; }
+  function feedback(texte) { msg(texte); dire(texte); }
+
+  /* ---------- Barre des scores (en haut) ---------- */
+  function reconstruireScores() {
+    const box = $('scores');
+    box.innerHTML = '';
+    box.className = 'scores' + (P.mode === 'bataille' ? ' bat' : '');
+    for (let i = 0; i < P.nb; i++) {
+      const d = document.createElement('div');
+      d.className = 'nav ligne-score';
+      d.id = 'sc-' + i;
+      d.tabIndex = 0;
+      d.setAttribute('role', 'group');
+      const a = document.createElement('span'), b = document.createElement('span');
+      a.className = 'sn'; b.className = 'ss';
+      d.appendChild(a); d.appendChild(b);
+      surClic(d, function () { clicScore(i); });
+      box.appendChild(d);
+    }
+    majScores();
+  }
+  function majScores() {
+    box_cible();
+    for (let i = 0; i < P.nb; i++) {
+      const d = $('sc-' + i), F = G.fiches[i];
+      if (!d) continue;
+      const t = F ? scoreFiche(F) : 0, bat = P.mode === 'bataille';
+      d.children[0].textContent = bat ? nom(i) : nom(i) + ' :';
+      d.children[1].textContent = bat ? String(t) : ' ' + t + ' pts';
+      d.classList.toggle('elim', !!(F && F.elim));
+      d.classList.toggle('actif', i === G.cur);
+      lab(d, F && F.elim ? nom(i) + ', éliminé' : nom(i) + ', ' + pts(t));
+    }
+  }
+  function box_cible() { $('scores').classList.toggle('cible', !!G.cible); }
+  function clicScore(i) {
+    if (G.cible) {
+      const F = G.fiches[i];
+      if (i === G.cible.source || F.elim) { dire(F.elim ? nom(i) + ' est éliminé.' : 'Choisissez un autre joueur.'); return; }
+      const r = G.cible.resolve; G.cible = null; box_cible(); r(i);
+      return;
+    }
+    if (!G.enCours || $('v-partie').hidden) return;
+    voirFiche(i);
+  }
+
+  /* ---------- Dés et piste ---------- */
+  const PIPS = { 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
+  const zone = $('zone');
+  const dice = [];
+  let sz = 40;
+  function dessiner(d, v) {
+    const c = [24, 50, 76];
+    let h = '<svg viewBox="0 0 100 100" aria-hidden="true">';
+    PIPS[v].forEach(function (k) {
+      h += '<circle cx="' + c[(k - 1) % 3] + '" cy="' + c[Math.floor((k - 1) / 3)] + '" r="11" fill="#fff"/>';
+    });
+    d.el.innerHTML = h + '</svg>';
+  }
+  const texteDe = (d) => (d.joker ? 'Joker, ' + d.v : String(d.v) + (d.held ? ', gardé' : ''));
+  function majDe(i) { lab(dice[i].el, texteDe(dice[i])); }
+  function mesurer() {
+    const W = zone.clientWidth, H = zone.clientHeight;
+    sz = Math.max(12, Math.min(W * 0.92 / NB_DES * 0.92, 90, H * 0.6));
+    zone.style.setProperty('--sz', sz + 'px');
+  }
+  function pointDansPiste(W, H) {
+    const rx = Math.max(0, W / 2 - sz * 0.75), ry = Math.max(0, H / 2 - sz * 0.75);
+    const a = Math.random() * 2 * Math.PI, r = Math.sqrt(Math.random());
+    return [W / 2 + rx * r * Math.cos(a) - sz / 2, H / 2 + ry * r * Math.sin(a) - sz / 2];
+  }
+  function poserXY(d, x, y, r) { d.el.style.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + r + 'deg)'; }
+  function aligner1(i) {
+    const W = zone.clientWidth, rowW = W * 0.92, slot = rowW / NB_DES;
+    poserXY(dice[i], (W - rowW) / 2 + i * slot + (slot - sz) / 2, (zone.clientHeight - sz) / 2, 0);
+  }
+  function disposer() {
+    mesurer();
+    dice.forEach(function (d, i) { d.el.style.transitionDuration = '0s'; aligner1(i); });
+  }
+  for (let i = 0; i < NB_DES; i++) {
+    const el = document.createElement('div');
+    el.tabIndex = 0;
+    el.className = 'de nav off';
+    zone.appendChild(el);
+    dice.push({ el: el, v: 1, held: false, joker: false });
+    surClic(el, function () { actionDe(i); });
+  }
+  if (window.ResizeObserver) {
+    new ResizeObserver(function () { if (!G.busy && zone.clientWidth) disposer(); }).observe(zone);
+  }
+  const valeurs = () => dice.map(function (d) { return d.v; });
+  const listeVoix = (idx) => dice.filter(function (_, i) { return !idx || idx[i]; }).map(function (d) { return d.joker ? 'joker ' + d.v : d.v; }).join(', ');
+  function reinitDes() {
+    dice.forEach(function (d) { d.held = false; d.joker = false; d.el.classList.remove('kept', 'joker'); d.el.classList.add('off'); });
+  }
+  function majInfoLancers() {
+    const e = $('info-lancers');
+    e.textContent = G.lancers === 0 ? 'Lancer 1 sur 3' : (G.lancers >= 3 ? 'Dernier lancer fait' : 'Lancer ' + (G.lancers + 1) + ' sur 3');
+    lab(e, G.lancers === 0 ? 'Trois lancers disponibles' : (G.lancers >= 3 ? 'Plus de lancers' : 'Il reste ' + (3 - G.lancers) + (3 - G.lancers > 1 ? ' lancers' : ' lancer')));
+  }
+
+  /* Lance les dés qui ne sont pas gardés (animation, puis dés alignés). Rend vrai si un joker est apparu. */
+  async function lancerDes(tk) {
+    G.busy = true;
+    msg('');
+    const idx = [];
+    dice.forEach(function (d, i) { if (!d.held) idx.push(i); });
+    G.dernier = dice.map(function (_, i) { return idx.indexOf(i) >= 0; });
+    jouer(sonLancer, idx.length);
+    const W = zone.clientWidth, H = zone.clientHeight;
+    const nouveaux = [];
+    idx.forEach(function (i) {
+      const d = dice[i];
+      d.v = 1 + rnd(6);
+      d.el.classList.remove('off', 'kept');
+      if (P.joker && Math.random() < PROB_JOKER) { d.joker = true; d.held = true; nouveaux.push(i); }
+    });
+    if (reduit) {
+      idx.forEach(function (i) { dice[i].el.style.transitionDuration = '0s'; aligner1(i); dessiner(dice[i], dice[i].v); });
+      await attendre(150);
+    } else {
+      const bas = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+      idx.forEach(function (i) {
+        const d = dice[i];
+        d.el.style.transitionDuration = '0s';
+        poserXY(d, bas ? W * 0.12 : -sz, bas ? H : (H - sz) / 2, 0);
+        dessiner(d, 1 + rnd(6));
+      });
+      void zone.offsetWidth;
+      await attendre(30);
+      for (let n = 1; n <= 4; n++) {
+        idx.forEach(function (i) {
+          const d = dice[i];
+          d.el.style.transitionDuration = '0.17s';
+          const pt = pointDansPiste(W, H);
+          poserXY(d, pt[0], pt[1], Math.random() * 700 - 350);
+          dessiner(d, n < 4 ? 1 + rnd(6) : d.v);
+        });
+        await attendre(n < 4 ? 180 : 450);
+        if (!vivant(tk)) return false;
+      }
+      idx.forEach(function (i) { dice[i].el.style.transitionDuration = '0.4s'; aligner1(i); });
+      await attendre(450);
+    }
+    if (!vivant(tk)) return false;
+    idx.forEach(function (i) { dessiner(dice[i], dice[i].v); });
+    dice.forEach(function (d, i) { d.el.classList.toggle('joker', d.joker); d.el.classList.toggle('kept', d.held && !d.joker); majDe(i); });
+    G.lancers++;
+    majInfoLancers();
+    majGrille();
+    if (nouveaux.length) jouer(SON.joker);
+    else if (estYam(comptesDe(valeurs()))) jouer(sonYam);
+    return nouveaux.length > 0;
+  }
+
+  /* ---------- La grille de scores (sur la même page que les dés) ---------- */
+  let cellEls = [], headEls = [], calcEls = [], grilleDe = -1, grilleMode = '';
+  const nomCol = (c) => (colonnes().length > 1 ? 'colonne ' + COLS[c].toLowerCase() : '');
+  function lignes() {
+    const L = [];
+    for (let k = 0; k < 6; k++) L.push({ k: k });
+    if (P.mode === 'bataille') { [CH, BR, CA, FU, PS, GS, YA].forEach(function (k) { L.push({ k: k }); }); return L; }
+    L.push({ t: 'haut' }, { t: 'p35' }, { t: 'p100' }, { t: 'hautTot' });
+    if (P.mode === 'standard') L.push({ k: MAXI }, { k: MINI }, { t: 'diff' }, { k: CH }, { k: PA }, { k: DP });
+    else L.push({ k: CH });
+    [BR, CA, FU, PS, GS, YA].forEach(function (k) { L.push({ k: k }); });
+    L.push({ t: 'bonus' }, { t: 'bas' }, { t: 'total' });
+    return L;
+  }
+  const LIB_CALC = { haut: 'Total haut', p35: 'Prime 35', p100: 'Prime 100', hautTot: 'Haut + primes', diff: 'Maxi − mini', bonus: 'Bonus yam', bas: 'Total bas', total: 'Total' };
+  function construireGrille() {
+    const box = $('grille'), nc = colonnes().length;
+    box.innerHTML = '';
+    box.className = 'grille ' + P.mode;
+    box.style.setProperty('--nc', nc);
+    cellEls = []; headEls = []; calcEls = [];
+    for (let c = 0; c < nc; c++) { cellEls.push({}); calcEls.push({}); }
+    const mk = function (cls, tag) { const e = document.createElement(tag || 'div'); e.className = cls; return e; };
+    if (nc > 1) {
+      box.appendChild(mk('gl'));
+      for (let c = 0; c < nc; c++) {
+        const h = mk('gc entete nav', 'button');
+        h.type = 'button'; h.textContent = COLS[c].charAt(0);
+        surClic(h, function () { activerColonne(c); });
+        box.appendChild(h); headEls.push(h);
+      }
+    }
+    lignes().forEach(function (L) {
+      const gl = mk('gl');
+      gl.textContent = L.t ? LIB_CALC[L.t] : LIB[L.k];
+      gl.setAttribute('aria-hidden', 'true');
+      box.appendChild(gl);
+      for (let c = 0; c < nc; c++) {
+        if (L.t) {
+          const e = mk('gc calc nav');
+          e.tabIndex = 0;
+          surClic(e, function () { dire(e.getAttribute('data-parle')); });
+          box.appendChild(e); calcEls[c][L.t] = e;
+        } else {
+          const e = mk('gc nav', 'button');
+          e.type = 'button';
+          surClic(e, function () { actionCase(c, L.k); });
+          box.appendChild(e); cellEls[c][L.k] = e;
+        }
+      }
+    });
+    grilleDe = -1; grilleMode = P.mode;
+    if (lecteur()) Array.prototype.forEach.call(box.querySelectorAll('.nav'), function (el) { el.setAttribute('role', 'group'); });
+  }
+  function majGrille() {
+    if (grilleMode !== P.mode + colonnes().length) { construireGrille(); grilleMode = P.mode + colonnes().length; }
+    const j = G.voir, F = G.fiches[j];
+    if (!F) return;
+    const nc = F.cols.length, bat = P.mode === 'bataille';
+    const live = j === G.cur && G.enCours && G.lancers > 0;
+    const vals = valeurs();
+    if (G.col >= nc) G.col = 0;
+    for (let c = 0; c < nc; c++) {
+      const actif = c === G.col;
+      const v = F.cols[c].v, t = calcCol(F, c);
+      const nomC = nomCol(c);
+      if (nc > 1) {
+        const h = headEls[c], restantes = idsCases().filter(function (k) { return v[k] === null; }).length;
+        h.classList.toggle('actif', actif);
+        lab(h, 'Colonne ' + COLS[c].toLowerCase() + (restantes ? '' : ', complète') + (actif ? ', sélectionnée' : ''));
+      }
+      const pose = function (el, on) {
+        el.classList.toggle('nav', on);
+        el.tabIndex = on ? 0 : -1;
+        if (on) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', 'true');
+      };
+      idsCases().forEach(function (k) {
+        const el = cellEls[c][k];
+        pose(el, actif);
+        let texte = '', parle = '', classe = 'gc' + (actif ? ' nav' : '');
+        const ok = jouable(F, c, k);
+        const s = live ? scoreCase(F, c, k, vals) : null;
+        if (bat) {
+          const r = F.cd[k];
+          el.style.background = 'linear-gradient(to right, #a50c1a ' + (r * 25) + '%, #000 ' + (r * 25) + '%)';
+          if (F.elim) parle = PARLE[k] + ', joueur éliminé';
+          else if (r < 4) parle = PARLE[k] + ', indisponible, encore ' + (4 - r) + ' tour' + plur(4 - r);
+          else { texte = live ? String(s) : ''; parle = PARLE[k] + ', disponible' + (live ? ', ' + pts(s) : ''); }
+        } else if (v[k] !== null) {
+          classe += ' fait'; texte = String(v[k]); parle = PARLE[k] + ', ' + nomC + (nomC ? ', ' : '') + pts(v[k]);
+        } else if (!ok) {
+          classe += ' bloque'; parle = PARLE[k] + ', ' + nomC + ', non rempli, pas disponible pour le moment';
+          if (live) texte = '';
+        } else {
+          texte = live ? String(s) : '';
+          parle = PARLE[k] + (nomC ? ', ' + nomC : '') + ', non rempli' + (live ? ', ' + pts(s) : '');
+        }
+        if (j !== G.cur) classe += ' vue';
+        el.className = classe;
+        el.textContent = texte;
+        lab(el, parle.replace(/, ,/g, ','));
+      });
+      if (!bat) {
+        const set = function (id, texte, parle) {
+          const el = calcEls[c][id];
+          if (!el) return;
+          pose(el, actif);
+          el.className = 'gc calc' + (actif ? ' nav' : '');
+          el.textContent = texte;
+          lab(el, parle + (nomC ? ', ' + nomC : ''));
+        };
+        set('haut', String(t.haut), 'Total du haut, ' + t.haut + ' sur 63');
+        set('p35', String(t.p35), t.p35 ? 'Prime de 35 points, acquise' : 'Prime de 35 points, il manque ' + (63 - t.haut) + ' points');
+        set('p100', String(t.p100), t.p100 ? 'Prime de 100 points, acquise' : 'Prime de 100 points, il manque ' + (84 - t.haut) + ' points');
+        set('hautTot', String(t.hautTot), 'Total du haut avec les primes, ' + t.hautTot);
+        set('diff', t.diff === null ? '—' : String(t.diff), t.diff === null ? 'Maxi moins mini, pas encore calculé' : 'Maxi moins mini, ' + nombre(t.diff));
+        set('bonus', String(t.bonus), 'Bonus yam, ' + pts(t.bonus));
+        set('bas', String(t.bas), 'Total du bas, ' + t.bas);
+        set('total', String(t.total), 'Total' + (nc > 1 ? '' : '') + ', ' + t.total);
+      }
+    }
+    if (nc > 1) headEls.forEach(function (h) { h.classList.add('nav'); });
+  }
+  function voirFiche(j) {
+    if (G.busy && j !== G.cur) { /* on peut lire pendant un tour de robot */ }
+    G.voir = j;
+    majGrille();
+    const F = G.fiches[j];
+    if (j === G.cur) { dire('Votre fiche.' ); } else { dire('Fiche de ' + nom(j) + ', ' + pts(scoreFiche(F))); }
+  }
+  function activerColonne(c) {
+    G.col = c;
+    majGrille();
+    const F = G.fiches[G.voir], k = premiereCase(F, c);
+    const el = k === null ? headEls[c] : cellEls[c][k];
+    allerA(el, 'Colonne ' + COLS[c].toLowerCase());
+  }
+  function allerHautGrille() {
+    G.voir = G.cur;
+    const F = G.fiches[G.cur];
+    if (colonnes().length > 1 && !colonneOuverte(F, G.col)) { for (let c = 0; c < colonnes().length; c++) if (colonneOuverte(F, c)) { G.col = c; break; } }
+    majGrille();
+    let el;
+    if (colonnes().length > 1) el = headEls[G.col];
+    else { const k = premiereCase(F, 0); el = k === null ? cellEls[0][idsCases()[0]] : cellEls[0][k]; }
+    return allerA(el, 'Grille');
+  }
+
+  /* =====================================================================
+     DÉROULEMENT D'UN TOUR
+     ===================================================================== */
+  function suivant() {
+    G.nbTours = (G.nbTours || 0) + 1;
+    if (P.mode === 'bataille') {
+      const vivants = G.fiches.slice(0, P.nb).filter(function (F) { return !F.elim; });
+      if (vivants.length <= 1 || G.nbTours > 400) { finPartie(G.token).catch(erreur); return; }
+      do { G.cur = (G.cur + 1) % P.nb; } while (G.fiches[G.cur].elim);
+    } else {
+      G.cur = (G.cur + 1) % P.nb;
+      if (G.cur === 0) G.tour++;
+      if (G.tour > nbCasesTotal()) { finPartie(G.token).catch(erreur); return; }
+    }
+    debutTour().catch(erreur);
+  }
+  async function debutTour() {
+    const tk = G.token;
+    G.lancers = 0;
+    G.voir = G.cur;
+    reinitDes();
+    majInfoLancers();
+    msg('');
+    if (P.mode === 'bataille') { const F = G.fiches[G.cur]; for (let k = 0; k < 17; k++) if (F.cd[k] < 4) F.cd[k]++; }
+    majScores();
+    majGrille();
+    disposer();
+    placerDouble();
+    $('tour-de').textContent = 'Tour de ' + nom(G.cur);
+    if (!estHumain(G.cur)) {
+      G.busy = true;
+      await dire('Tour de ' + nom(G.cur));
+      if (!vivant(tk)) return;
+      await attendre(300);
+      if (!vivant(tk)) return;
+      await tourRobot(tk);
+    } else {
+      G.busy = false;
+      if (lecteur()) {
+        await dire('Tour de ' + nom(G.cur));
+        if (!vivant(tk)) return;
+        await attendre(250);
+        if (!vivant(tk)) return;
+        focusSilencieux($('gobelet'));
+      } else {
+        focusSilencieux($('gobelet'));
+        dire('Tour de ' + nom(G.cur) + '. Lancer.');
+      }
+    }
+  }
+  const resteTxt = () => (G.lancers >= 3 ? '' : '. Il reste ' + (3 - G.lancers) + (3 - G.lancers > 1 ? ' lancers' : ' lancer'));
+  async function lancerHumain(tk) {
+    await lancerDes(tk);
+    if (!vivant(tk)) return;
+    const txt = listeVoix(G.dernier);
+    if (G.lancers >= 3) {
+      await dire(txt + '. Choisissez une case.');
+      if (!vivant(tk)) return;
+      G.busy = false;
+      await allerHautGrille();
+    } else {
+      G.busy = false;
+      dire(txt);
+    }
+  }
+  function actionGobelet() {
+    try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
+    if (!tourHumain()) return;
+    if (G.lancers >= 3) { feedback('Plus de lancers. Choisissez une case.'); allerHautGrille(); return; }
+    if (G.lancers > 0 && dice.every(function (d) { return d.held; })) { feedback('Libérez au moins un dé pour relancer.'); return; }
+    G.voir = G.cur;
+    lancerHumain(G.token).catch(erreur);
+  }
+  function actionValider() {
+    try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
+    if (!tourHumain()) return;
+    if (G.lancers === 0) { feedback('Lancez d’abord les dés.'); return; }
+    jouer(sonStop);
+    allerHautGrille();
+  }
+  function actionDe(i) {
+    try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
+    if (!tourHumain()) return;
+    if (G.lancers === 0) { feedback('Lancez d’abord les dés.'); return; }
+    const d = dice[i];
+    if (d.joker) {
+      const etaitYam = estYam(comptesDe(valeurs()));
+      d.v = d.v % 6 + 1;
+      dessiner(d, d.v);
+      majDe(i);
+      majGrille();
+      jouer(sonGarder);
+      if (!etaitYam && estYam(comptesDe(valeurs()))) jouer(sonYam);
+      dire('Joker, ' + d.v, { court: true });
+      return;
+    }
+    d.held = !d.held;
+    d.el.classList.toggle('kept', d.held);
+    majDe(i);
+    if (d.held) jouer(sonGarder);
+    dire(d.held ? 'Gardé' : 'Libéré', { court: true });
+  }
+  function actionCase(c, k) {
+    try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
+    const el = cellEls[c][k];
+    if (G.voir !== G.cur || !tourHumain()) { dire(el.getAttribute('data-parle')); return; }
+    if (G.lancers === 0) { feedback('Lancez d’abord les dés.'); return; }
+    const F = G.fiches[G.cur];
+    if (!jouable(F, c, k)) { feedback(P.mode !== 'bataille' && F.cols[c].v[k] !== null ? 'Case déjà remplie.' : 'Cette case n’est pas disponible pour le moment.'); return; }
+    G.col = c;
+    jouerCase(G.cur, c, k, G.token, false).catch(erreur);
+  }
+
+  /* ---------- Jouer une case (humain ou robot) ---------- */
+  async function jouerCase(i, c, k, tk, robot) {
+    G.busy = true;
+    G.voir = i;
+    const F = G.fiches[i], vals = valeurs(), cc = comptesDe(vals), nomJ = nom(i);
+    const s = scoreCase(F, c, k, vals);
+    if (P.mode === 'bataille') { await coupBataille(i, k, s, tk, robot); if (!vivant(tk)) return; await attendre(300); if (!vivant(tk)) return; suivant(); return; }
+    const bonus = yamJoker(F, c, cc);
+    const avant = calcCol(F, c);
+    F.cols[c].v[k] = s;
+    if (bonus) F.cols[c].bonus++;
+    const apres = calcCol(F, c);
+    jouer(s > 0 ? SON.bip : sonFarkle);
+    majScores();
+    majGrille();
+    msg(robot ? nomJ + ' : ' + LIB[k] + ' ' + s : '');
+    const t = scoreFiche(F);
+    await attendre(s > 0 ? 700 : 350);
+    if (!vivant(tk)) return;
+    const col = colonnes().length > 1 ? ', ' + COLS[c].toLowerCase() : '';
+    let txt;
+    if (robot) txt = s > 0 ? nomJ + ' marque ' + pts(s) + ', ' + PARLE[k].toLowerCase() + col + '.' : nomJ + ' barre ' + PARLE[k].toLowerCase() + col + '.';
+    else txt = s > 0 ? PARLE[k] + col + ', ' + pts(s) + '.' : PARLE[k] + col + ' barré. Zéro point.';
+    if (bonus) txt += ' Yam supplémentaire : 100 points de bonus.';
+    if (!robot && k < 6) txt += ' Total du haut, ' + apres.haut + '.';
+    if (apres.p35 && !avant.p35) txt += ' Prime de 35 points atteinte.';
+    if (apres.p100 && !avant.p100) txt += ' Prime de 100 points atteinte.';
+    if (!robot && (k === MAXI || k === MINI) && apres.diff !== null) txt += ' Différence entre maxi et mini, ' + nombre(apres.diff) + '.';
+    await dire(txt + ' Total, ' + t + '.');
+    if (!vivant(tk)) return;
+    await attendre(250);
+    if (!vivant(tk)) return;
+    suivant();
+  }
+
+  /* ---------- Mode bataille ---------- */
+  function faceSVG(type) {
+    if (type === 'croix') return '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M22 22 L78 78 M78 22 L22 78" stroke="#e8001c" stroke-width="16" stroke-linecap="round"/></svg>';
+    if (type === 'epees') return '<svg viewBox="0 0 100 100" aria-hidden="true"><g stroke="#fff" stroke-linecap="round" fill="none"><path d="M18 18 L72 72 M82 18 L28 72" stroke-width="7"/><path d="M62 62 L82 82 M38 62 L18 82" stroke-width="7"/><path d="M60 78 L78 60 M40 78 L22 60" stroke-width="9"/></g></svg>';
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 84 C14 58 12 30 32 24 C42 21 49 28 50 34 C51 28 58 21 68 24 C88 30 86 58 50 84 Z" fill="#17c24c"/></svg>';
+  }
+  /* Dé spécial : 2 faces croix, 2 faces épées, 2 faces cœur. */
+  async function deSpecial(tk) {
+    const e = document.createElement('div');
+    e.className = 'dspec';
+    $('zone').parentNode.appendChild(e);
+    const types = ['croix', 'epees', 'coeur'];
+    const final = types[rnd(3)];
+    jouer(sonLancer, 1);
+    const n = reduit || RAPIDE ? 1 : 9;
+    for (let q = 0; q < n; q++) {
+      e.innerHTML = faceSVG(types[rnd(3)]);
+      await attendre(130);
+      if (!vivant(tk)) { e.remove(); return null; }
+    }
+    e.innerHTML = faceSVG(final);
+    jouer(SON[final]);
+    await attendre(1100);
+    e.remove();
+    return vivant(tk) ? final : null;
+  }
+  async function choisirCible(i, tk, robot) {
+    const cands = [];
+    for (let j = 0; j < P.nb; j++) if (j !== i && !G.fiches[j].elim) cands.push(j);
+    if (!cands.length) return null;
+    if (robot) {
+      let b = cands[0];
+      cands.forEach(function (j) { if (G.fiches[j].pv > G.fiches[b].pv) b = j; });
+      return b;
+    }
+    if (cands.length === 1) return cands[0];
+    const p = new Promise(function (resolve) { G.cible = { source: i, resolve: resolve }; });
+    box_cible();
+    await allerA($('sc-' + cands[0]), 'Choisissez le joueur à attaquer');
+    return p;
+  }
+  async function subir(t, n, tk) {
+    const F = G.fiches[t];
+    F.pv = Math.max(0, F.pv - n);
+    majScores();
+    let txt = nom(t) + ' perd ' + pts(n) + '. ';
+    if (F.pv === 0) { F.elim = true; majScores(); txt += nom(t) + ' est éliminé.'; } else txt += 'Il lui reste ' + pts(F.pv) + '.';
+    await dire(txt);
+  }
+  async function coupBataille(i, k, s, tk, robot) {
+    const F = G.fiches[i], nomJ = nom(i);
+    F.cd[k] = 0;
+    majGrille();
+    const intro = (robot ? nomJ + ' joue ' : '') + PARLE[k].toLowerCase() + ', ' + pts(s) + '. ';
+    if (k < 6) {
+      if (s > 0) { jouer(SON.coeur); F.pv += s; majScores(); await dire(intro + nomJ + ' gagne ' + pts(s) + ' et a maintenant ' + pts(F.pv) + '.'); }
+      else { jouer(sonFarkle); await dire(intro + 'Aucun point gagné.'); }
+      return;
+    }
+    if (k === CH) {
+      await dire(intro + 'Lancer du dé spécial.');
+      if (!vivant(tk)) return;
+      const f = await deSpecial(tk);
+      if (!vivant(tk) || !f) return;
+      if (f === 'coeur') { F.pv += s; majScores(); await dire('Cœur ! ' + nomJ + ' gagne ' + pts(s) + ' et a maintenant ' + pts(F.pv) + '.'); }
+      else if (f === 'croix') { await dire('Croix ! '); if (!vivant(tk)) return; await subir(i, s, tk); }
+      else {
+        await dire('Épées ! ');
+        if (!vivant(tk)) return;
+        const t = await choisirCible(i, tk, robot);
+        if (!vivant(tk) || t === null) return;
+        jouer(SON.bip);
+        await attendre(400);
+        await subir(t, s, tk);
+      }
+      return;
+    }
+    if (s <= 0) { jouer(sonFarkle); await dire(intro + 'Attaque ratée.'); return; }
+    jouer(SON.epees);
+    await dire(intro + 'Attaque !');
+    if (!vivant(tk)) return;
+    const t = await choisirCible(i, tk, robot);
+    if (!vivant(tk) || t === null) return;
+    jouer(SON.bip);
+    await attendre(350);
+    if (!vivant(tk)) return;
+    await subir(t, s, tk);
+  }
+
+  /* ---------- Tour d'un robot ---------- */
+  function ajusterJokers(niveau, ctx) {
+    const J = [];
+    dice.forEach(function (d, i) { if (d.joker) J.push(i); });
+    if (!J.length) return;
+    const r = J.length > 3 ? 0 : 3 - G.lancers;
+    let best = -1e9, bestA = null;
+    (function rec(n, cur) {
+      if (n === J.length) {
+        const vals = dice.map(function (d, i) { const p = J.indexOf(i); return p >= 0 ? cur[p] : d.v; });
+        const val = VR(r, comptesDe(vals), ctx);
+        if (val > best + 1e-9) { best = val; bestA = cur.slice(); }
+        return;
+      }
+      for (let v = 1; v <= 6; v++) { cur[n] = v; rec(n + 1, cur); }
+    })(0, []);
+    J.forEach(function (i, p) { dice[i].v = bestA[p]; dessiner(dice[i], bestA[p]); majDe(i); });
+  }
+  async function tourRobot(tk) {
+    const p = P.joueurs[G.cur], nomJ = nom(G.cur), niveau = p.niveau, i = G.cur;
+    const F = G.fiches[i], ctx = contexte(niveau, F);
+    for (;;) {
+      await lancerDes(tk);
+      if (!vivant(tk)) return;
+      if (niveau !== 'Débutant') ajusterJokers(niveau, ctx);
+      majGrille();
+      const vals = valeurs();
+      await dire(listeVoix(G.dernier));
+      if (!vivant(tk)) return;
+      await attendre(300);
+      if (!vivant(tk)) return;
+      if (G.lancers >= 3) break;
+      const h = decider(niveau, vals, 3 - G.lancers, F, ctx, dice.map(function (x) { return x.held; }));
+      if (!h) break;
+      dice.forEach(function (d, q) { if (d.joker) h[q] = true; });
+      if (h.every(Boolean)) break;
+      for (let q = 0; q < NB_DES; q++) {
+        const dd = dice[q];
+        if (h[q] !== dd.held) {
+          dd.held = h[q];
+          dd.el.classList.toggle('kept', dd.held);
+          majDe(q);
+          if (dd.held) { jouer(sonGarder); await attendre(350); if (!vivant(tk)) return; }
+        }
+      }
+      const nb = h.filter(Boolean).length;
+      await dire(nb ? nomJ + ' garde ' + listeVoix(h) + '.' : nomJ + ' relance tous les dés.');
+      if (!vivant(tk)) return;
+      await attendre(300);
+      if (!vivant(tk)) return;
+    }
+    const ch = choixRobot(niveau, valeurs(), F, ctx);
+    if (!ch) { suivant(); return; }
+    await jouerCase(i, ch.c, ch.k, tk, true);
+  }
+
+  /* ---------- Fin de partie ---------- */
+  function classement() {
+    const l = [];
+    for (let i = 0; i < P.nb; i++) l.push({ n: nom(i), s: scoreFiche(G.fiches[i]), i: i });
+    l.sort(function (a, b) { return b.s - a.s || a.i - b.i; });
+    return l;
+  }
+  function gagnants(l) {
+    if (P.mode === 'bataille') {
+      const v = l.filter(function (x) { return !G.fiches[x.i].elim; });
+      return v.length ? [v[0]] : [l[0]];
+    }
+    return l.filter(function (x) { return x.s === l[0].s; });
+  }
+  /* ---------- Tournois ---------- */
+  const ETAPES = [
+    { mode: 'rapide', joker: false, niv: ['Débutant'] },
+    { mode: 'rapide', joker: false, niv: ['Intermédiaire'] },
+    { mode: 'standard', joker: false, niv: ['Intermédiaire'] },
+    { mode: 'bataille', joker: false, niv: ['Débutant', 'Intermédiaire'] },
+    { mode: 'rapide', joker: true, niv: ['Pro'] },
+    { mode: 'bataille', joker: true, niv: ['Intermédiaire', 'Pro'] },
+    { mode: 'standard', joker: true, niv: ['Pro'] },
+    { mode: 'standard', joker: true, niv: ['Expert'] }
+  ];
+  let T = null;
+  const modeTxt = (m, j) => MODE_TXT[m].toLowerCase() + (j ? ' avec joker' : '');
+  function construireFin(l, w, extra) {
+    const box = $('liste-fin');
+    box.innerHTML = '';
+    const bat = P.mode === 'bataille';
+    const ligne = function (parent, texte, parle) {
+      const d = document.createElement('div');
+      d.className = 'nav'; d.tabIndex = 0; d.setAttribute('role', 'group');
+      d.textContent = texte; lab(d, parle || texte);
+      parent.appendChild(d);
+    };
+    l.forEach(function (x, k) { ligne(box, (k + 1) + '. ' + x.n + ' : ' + x.s + ' points', x.n + ', ' + pts(x.s)); });
+    const g = $('gagnant'), noms = w.map(function (x) { return x.n; });
+    let ban = noms.join(' ET ').toUpperCase() + (noms.length > 1 ? ' ONT GAGNÉ !' : ' A GAGNÉ !');
+    let ban2 = noms.join(' et ') + (noms.length > 1 ? ' ont gagné' : ' a gagné');
+    if (extra && extra.banniere) { ban = extra.banniere; ban2 = extra.banniere; }
+    g.textContent = ban;
+    lab(g, ban2);
+    const cu = $('liste-cumul'), inf = $('info-fin');
+    cu.innerHTML = '';
+    inf.hidden = !(extra && extra.info);
+    if (extra && extra.info) { inf.textContent = extra.info; lab(inf, extra.info); }
+    if (extra && extra.cumul) extra.cumul.forEach(function (x, k) { ligne(cu, 'Cumul ' + (k + 1) + '. ' + x.n + ' : ' + x.s, 'Cumul, ' + x.n + ', ' + pts(x.s)); });
+    const okb = $('ok-fin'), tx = extra && extra.bouton ? extra.bouton : 'OK';
+    okb.textContent = tx; lab(okb, tx);
+  }
+  async function finPartie(tk) {
+    G.enCours = false; G.busy = true; G.cible = null; box_cible();
+    const l = classement(), w = gagnants(l), bat = P.mode === 'bataille';
+    const noms = w.map(function (x) { return x.n; });
+    let extra = null, vocal = '';
+    const gagneHumain = w.some(function (x) { return estHumain(x.i); }) && w.some(function (x) { return x.i === 0; });
+    if (T && T.type === 'camp') {
+      const e = reg.etape, dernier = e >= ETAPES.length - 1;
+      if (w.some(function (x) { return x.i === 0; })) {
+        if (dernier) { reg.etape = 0; extra = { banniere: 'GRANDE CHAMPIONNE !', info: 'Tu as battu tous les adversaires du défi.', bouton: 'OK' }; T.fini = true; vocal = ' Bravo ! Tu es la grande championne !'; }
+        else { reg.etape++; extra = { info: 'Étape ' + (e + 1) + ' réussie. Prochaine étape : ' + (e + 2) + ' sur ' + ETAPES.length + '.', bouton: 'Étape suivante' }; vocal = ' Étape réussie. Prochaine étape, ' + (e + 2) + ' sur ' + ETAPES.length + '.'; T.fini = false; }
+      } else { reg.etape = 0; extra = { info: 'Perdu à l’étape ' + (e + 1) + '. Le défi recommence.', bouton: 'OK' }; T.fini = true; vocal = ' Perdu. Le défi recommence.'; }
+      sauver();
+    } else if (T && T.type === 'perso') {
+      l.forEach(function (x) { T.cumul[x.i] += x.s; });
+      const cum = T.cumul.slice(0, P.nb).map(function (s, i) { return { n: nom(i), s: s, i: i }; }).sort(function (a, b) { return b.s - a.s || a.i - b.i; });
+      const dernier = T.idx >= T.liste.length - 1;
+      if (dernier) {
+        const top = cum.filter(function (x) { return x.s === cum[0].s; }).map(function (x) { return x.n; });
+        extra = { banniere: 'GRAND GAGNANT : ' + top.join(' ET '), info: 'Tournoi terminé après ' + T.liste.length + ' parties.', cumul: cum, bouton: 'OK' };
+        vocal = ' Fin du tournoi. Grand gagnant : ' + top.join(' et ') + '. ' + cum.map(function (x) { return x.n + ', ' + pts(x.s) + '.'; }).join(' ');
+        T.fini = true;
+      } else {
+        extra = { info: 'Partie ' + (T.idx + 1) + ' sur ' + T.liste.length + ' terminée.', cumul: cum, bouton: 'Partie suivante' };
+        vocal = ' Cumul : ' + cum.map(function (x) { return x.n + ', ' + pts(x.s) + '.'; }).join(' ');
+        T.fini = false;
+      }
+    }
+    construireFin(l, w, extra);
+    show('fin');
+    focusSilencieux($('ok-fin'));
+    jouer(sonVictoire);
+    await attendre(3600);
+    if (!vivant(tk)) return;
+    const resume = l.map(function (x) { return x.n + ', ' + pts(x.s) + '.'; }).join(' ') + ' ' + noms.join(' et ') + (noms.length > 1 ? ' ont gagné !' : ' a gagné !');
+    await dire('Fin de la partie. ' + resume + vocal);
+    G.busy = false;
+  }
+  function suiteFin() {
+    if (T && !T.fini) {
+      if (T.type === 'perso') T.idx++;
+      lancerPartieTournoi().catch(erreur);
+      return;
+    }
+    T = null;
+    retourAccueil();
+  }
+  async function lancerPartieTournoi() {
+    let intro;
+    if (T.type === 'camp') {
+      const e = ETAPES[reg.etape];
+      const joueurs = [{ type: 'humain', niveau: 'Intermédiaire', nom: reg.joueurs[0].nom || 'Vanessa' }].concat(e.niv.map(function (n) { return { type: 'robot', niveau: n, nom: '' }; }));
+      configurer(e.mode, e.joker, joueurs);
+      intro = 'Défi, étape ' + (reg.etape + 1) + ' sur ' + ETAPES.length + '. Mode ' + modeTxt(e.mode, e.joker) + ', contre ' + e.niv.map(function (n) { return affNiv(n); }).join(' et ') + '.';
+    } else {
+      const p = T.liste[T.idx];
+      configurer(p.mode, p.joker, T.joueurs);
+      intro = 'Tournoi, partie ' + (T.idx + 1) + ' sur ' + T.liste.length + '. Mode ' + modeTxt(p.mode, p.joker) + '.';
+    }
+    await demarrer(intro);
+  }
+  function lancerTournoi(type) {
+    try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
+    if (type === 'camp') { T = { type: 'camp', fini: false }; lancerPartieTournoi().catch(erreur); return; }
+    const liste = reg.perso.filter(function (p) { return p.mode !== 'bataille' || reg.nb >= 2; });
+    if (!liste.length) { dire('Aucune partie programmée. Ajoutez des parties dans les paramètres, mode tournoi.'); return; }
+    T = { type: 'perso', idx: 0, liste: liste, fini: false, joueurs: reg.joueurs.slice(0, reg.nb).map(function (p) { return { type: p.type, niveau: p.niveau, nom: p.nom }; }), cumul: [0, 0, 0, 0] };
+    lancerPartieTournoi().catch(erreur);
+  }
+
+  /* =====================================================================
+     ÉCRANS
+     ===================================================================== */
+  const VUES = ['accueil', 'partie', 'reglages', 'perso', 'fin'];
+  function show(v) {
+    VUES.forEach(function (x) { $('v-' + x).hidden = x !== v; });
+    $('haut').hidden = !(v === 'accueil' || v === 'partie');
+    $('scores').hidden = v !== 'partie';
+    if (v === 'partie') { disposer(); majGrille(); placerDouble(); }
+  }
+  function abandonner() {
+    G.token++;
+    G.enCours = false; G.busy = false; G.cible = null;
+    taire();
+    const z = document.querySelector('.dspec'); if (z) z.remove();
+  }
+  function configurer(mode, joker, joueurs) {
+    P.mode = mode; P.joker = joker; P.pv = reg.pv; P.joueurs = joueurs; P.nb = joueurs.length;
+  }
+  function configurerNormal() { const m = MODES.indexOf(reg.mode) >= 0; configurer(m ? reg.mode : 'rapide', m && reg.joker, reg.joueurs.slice(0, reg.nb)); }
+  function remiseAZero() {
+    G.fiches = [];
+    for (let i = 0; i < P.nb; i++) G.fiches.push(nouvelleFiche());
+    G.cur = 0; G.voir = 0; G.col = 0; G.tour = 1; G.lancers = 0; G.nbTours = 0; G.cible = null;
+    reconstruireScores();
+    grilleMode = '';
+    majInfoLancers();
+    reinitDes();
+  }
+  async function demarrer(intro) {
+    abandonner();
+    remiseAZero();
+    G.enCours = true; G.busy = true;
+    show('partie');
+    const tk = G.token;
+    if (intro) {
+      msg(intro);
+      await dire(intro);
+      if (!vivant(tk)) return;
+    }
+    debutTour().catch(erreur);
+  }
+  function nouvellePartie() {
+    try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
+    T = null;
+    if (reg.mode === 'defi') { lancerTournoi('camp'); return; }
+    if (reg.mode === 'tournoi') { lancerTournoi('perso'); return; }
+    if (reg.mode === 'bataille' && reg.nb < 2) { dire('La bataille demande au moins deux joueurs. Changez le nombre de joueurs dans les paramètres.'); return; }
+    configurerNormal();
+    demarrer('').catch(erreur);
+  }
+  function retourAccueil() {
+    abandonner();
+    configurerNormal();
+    remiseAZero();
+    show('accueil');
+    majAccueil();
+    $('nouvelle').focus();
+  }
+  function majAccueil() {
+    const n = $('nouvelle'), m = MODE_TXT[reg.mode] + (reg.mode === 'defi' && reg.etape > 0 ? ', étape ' + (reg.etape + 1) + ' sur ' + ETAPES.length : '');
+    n.innerHTML = 'NOUVELLE PARTIE<small>Mode ' + m.toLowerCase() + '</small>';
+    lab(n, 'Nouvelle partie, mode ' + m.toLowerCase());
+  }
+
+  /* ---------- Paramètres ---------- */
+  function btnReglage(id, parent) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn reglage nav'; b.id = id;
+    $(parent || 'r-liste').appendChild(b);
+    return b;
+  }
+  const rMode = btnReglage('r-mode'), rJoker = btnReglage('r-joker'), rPv = btnReglage('r-pv');
+  const rNb = btnReglage('r-nb');
+  const rType = [], rNom = [], rIn = [], rNiv = [];
+  for (let i = 0; i < 4; i++) {
+    rType.push(btnReglage('r-type-' + i));
+    rNom.push(btnReglage('r-nom-' + i));
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.id = 'r-in-' + i; inp.className = 'saisie nav'; inp.maxLength = 14; inp.hidden = true;
+    inp.setAttribute('autocomplete', 'off'); inp.setAttribute('autocapitalize', 'words'); inp.placeholder = 'Joueur';
+    $('r-liste').appendChild(inp);
+    rIn.push(inp);
+    rNiv.push(btnReglage('r-niv-' + i));
+  }
+  const rVoix = btnReglage('r-voix');
+  const rCadres = btnReglage('r-cadres');
+  const rPerso = btnReglage('r-perso');
+  const rEtape = btnReglage('r-etape');
+  rMode.after(rPerso, rEtape);
+  let edition = null;
+  function majReglages() {
+    const defi = reg.mode === 'defi', tournoi = reg.mode === 'tournoi';
+    rMode.textContent = 'Mode : ' + MODE_TXT[reg.mode];
+    lab(rMode, 'Mode, ' + MODE_TXT[reg.mode].toLowerCase());
+    rJoker.hidden = defi || tournoi;
+    rJoker.textContent = 'Joker : ' + (reg.joker ? 'activé' : 'désactivé');
+    lab(rJoker, 'Joker, ' + (reg.joker ? 'activé' : 'désactivé'));
+    rPv.hidden = !(reg.mode === 'bataille' || tournoi || defi);
+    rPv.textContent = 'Points de départ (bataille) : ' + reg.pv;
+    lab(rPv, 'Points de départ de la bataille, ' + reg.pv);
+    rNb.hidden = defi;
+    rNb.textContent = 'Nombre de joueurs : ' + reg.nb;
+    lab(rNb, 'Nombre de joueurs, ' + reg.nb);
+    for (let i = 0; i < 4; i++) {
+      const p = reg.joueurs[i], robot = p.type === 'robot';
+      const absent = defi ? i > 0 : i >= reg.nb;
+      rType[i].hidden = absent || (defi && i === 0);
+      rType[i].textContent = 'Participant ' + (i + 1) + ' : ' + (robot ? 'Robot' : 'Humain');
+      lab(rType[i], 'Participant ' + (i + 1) + ', ' + (robot ? 'robot' : 'humain'));
+      const nm = i < reg.nb ? nomReg(i) : '';
+      rNom[i].hidden = absent || (robot && !defi) || edition === i;
+      rNom[i].textContent = 'Nom : ' + nm;
+      lab(rNom[i], 'Nom du participant ' + (i + 1) + ', ' + nm);
+      rIn[i].hidden = edition !== i;
+      lab(rIn[i], 'Nom du participant ' + (i + 1) + '. Saisissez le nom puis validez.');
+      rNiv[i].hidden = absent || !robot || defi;
+      rNiv[i].textContent = 'Niveau : ' + affNiv(p.niveau);
+      lab(rNiv[i], 'Niveau du participant ' + (i + 1) + ', ' + affNiv(p.niveau).toLowerCase());
+    }
+    rVoix.textContent = 'Voix : ' + (reg.voix ? 'activée' : 'désactivée');
+    lab(rVoix, 'Voix, ' + (reg.voix ? 'activée' : 'désactivée'));
+    rCadres.textContent = 'Encadrés jaunes : ' + (reg.cadres ? 'activés' : 'désactivés');
+    lab(rCadres, 'Encadrés jaunes, ' + (reg.cadres ? 'activés' : 'désactivés'));
+    rPerso.hidden = !tournoi;
+    rPerso.textContent = 'Tournoi : ' + reg.perso.length + ' partie' + plur(reg.perso.length) + ' (modifier)';
+    lab(rPerso, 'Tournoi, ' + reg.perso.length + ' partie' + plur(reg.perso.length) + '. Modifier.');
+    rEtape.hidden = !(defi && reg.etape > 0);
+    rEtape.textContent = 'Recommencer le défi (étape ' + (reg.etape + 1) + ')';
+    lab(rEtape, 'Recommencer le défi depuis le début. Vous êtes à l’étape ' + (reg.etape + 1));
+    document.body.classList.toggle('sans-cadre', !reg.cadres);
+  }
+  function changer(el, fn, opt) {
+    surClic(el, function () {
+      fn();
+      sauver();
+      majReglages();
+      dire(el.getAttribute('data-parle'), opt);
+    });
+  }
+  changer(rMode, function () { reg.mode = MODES_ALL[(MODES_ALL.indexOf(reg.mode) + 1) % MODES_ALL.length]; if (reg.mode === 'bataille' && reg.nb < 2) reg.nb = 2; });
+  changer(rJoker, function () { reg.joker = !reg.joker; });
+  changer(rPv, function () { reg.pv = PV_CHOIX[(PV_CHOIX.indexOf(reg.pv) + 1) % PV_CHOIX.length]; });
+  changer(rNb, function () { const min = reg.mode === 'bataille' ? 2 : 1; reg.nb = reg.nb >= 4 ? min : reg.nb + 1; });
+  for (let i = 0; i < 4; i++) {
+    changer(rType[i], function () { reg.joueurs[i].type = reg.joueurs[i].type === 'robot' ? 'humain' : 'robot'; });
+    changer(rNiv[i], function () { reg.joueurs[i].niveau = NIVEAUX[(NIVEAUX.indexOf(reg.joueurs[i].niveau) + 1) % NIVEAUX.length]; });
+  }
+  surClic(rVoix, function () { reg.voix = !reg.voix; sauver(); majReglages(); dire(rVoix.getAttribute('data-parle'), { force: true }); });
+  surClic(rCadres, function () { reg.cadres = !reg.cadres; sauver(); majReglages(); dire(rCadres.getAttribute('data-parle')); });
+  surClic(rEtape, function () { reg.etape = 0; sauver(); majReglages(); dire('Défi remis au début.'); focusSilencieux(rPerso); });
+  function debutEdition(i) {
+    edition = i;
+    majReglages();
+    rIn[i].value = reg.joueurs[i].nom || '';
+    focusSilencieux(rIn[i]);
+    try { rIn[i].select(); } catch (e) { /* rien */ }
+    dire('Nom du participant ' + (i + 1) + '. Saisissez le nom puis validez.');
+  }
+  function finEdition(refocus) {
+    if (edition === null) return;
+    const i = edition;
+    let v = rIn[i].value.replace(/\s+/g, ' ').trim().slice(0, 14);
+    if (!v && i === 0) v = 'Vanessa';
+    reg.joueurs[i].nom = v;
+    edition = null;
+    sauver();
+    majReglages();
+    if (refocus) focusSilencieux(rNom[i]);
+    dire('Nom du participant ' + (i + 1) + ', ' + nomReg(i));
+  }
+  for (let i = 0; i < 4; i++) {
+    surClic(rNom[i], function () { debutEdition(i); });
+    rIn[i].addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); finEdition(true); } });
+    rIn[i].addEventListener('blur', function () { finEdition(false); });
+  }
+  function ouvrirReglages() {
+    abandonner(); T = null;
+    majReglages();
+    show('reglages');
+    focusSilencieux(rMode);
+    dire('Paramètres. ' + rMode.getAttribute('data-parle'));
+  }
+
+  /* ---------- Tournoi personnalisé : liste des parties ---------- */
+  const COMBOS = [];
+  MODES.forEach(function (m) { [false, true].forEach(function (j) { COMBOS.push({ mode: m, joker: j }); }); });
+  function majPerso(focusId) {
+    const box = $('p-liste');
+    box.innerHTML = '';
+    const mk = function (id, texte, parle, fn) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn reglage nav'; b.id = id;
+      b.textContent = texte; lab(b, parle);
+      if (lecteur()) b.setAttribute('role', 'group');
+      surClic(b, fn);
+      box.appendChild(b);
+      return b;
+    };
+    reg.perso.forEach(function (p, i) {
+      const t = 'Partie ' + (i + 1) + ' : ' + MODE_TXT[p.mode] + (p.joker ? ' avec joker' : '');
+      mk('pp-' + i, t, t + '. Changer.', function () {
+        const k = COMBOS.findIndex(function (x) { return x.mode === p.mode && x.joker === p.joker; });
+        const n = COMBOS[(k + 1) % COMBOS.length];
+        p.mode = n.mode; p.joker = n.joker; sauver(); majPerso('pp-' + i);
+        dire('Partie ' + (i + 1) + ', ' + modeTxt(p.mode, p.joker));
+      });
+      mk('pr-' + i, 'Retirer la partie ' + (i + 1), 'Retirer la partie ' + (i + 1), function () {
+        reg.perso.splice(i, 1); sauver(); majPerso(reg.perso.length ? 'pp-' + Math.max(0, i - 1) : 'p-ajout');
+        dire('Partie retirée.');
+      });
+    });
+    if (reg.perso.length < 8) {
+      mk('p-ajout', 'Ajouter une partie', 'Ajouter une partie', function () {
+        reg.perso.push({ mode: 'rapide', joker: false }); sauver(); majPerso('pp-' + (reg.perso.length - 1));
+        dire('Partie ' + reg.perso.length + ', classique. Ajoutée.');
+      });
+    }
+    const nb = document.createElement('div');
+    nb.className = 'info-fin nav'; nb.tabIndex = 0; nb.setAttribute('role', 'group');
+    nb.textContent = 'Les scores des parties sont cumulés. Participants : ceux des paramètres.';
+    lab(nb, nb.textContent);
+    box.appendChild(nb);
+    if (focusId && $(focusId)) focusSilencieux($(focusId));
+  }
+  function ouvrirPerso() {
+    majPerso('');
+    show('perso');
+    const premier = $('p-liste').querySelector('.nav');
+    if (premier) focusSilencieux(premier);
+    dire('Tournoi. ' + reg.perso.length + ' partie' + plur(reg.perso.length) + '.');
+  }
+
+  surClic($('nouvelle'), nouvellePartie);
+  surClic($('engrenage'), ouvrirReglages);
+  surClic($('gobelet'), actionGobelet);
+  surClic($('valider'), actionValider);
+  surClic(rPerso, ouvrirPerso);
+  surClic($('ok-perso'), function () { show('reglages'); majReglages(); focusSilencieux(rPerso); dire('Paramètres'); });
+  surClic($('ok-reglages'), function () { sauver(); retourAccueil(); });
+  surClic($('ok-fin'), suiteFin);
+
+  /* =====================================================================
+     NAVIGATION AU CLAVIER (flèches + OK) ET LECTURE DE L'ÉLÉMENT ACTIF
+     ===================================================================== */
+  function navItems() {
+    return Array.prototype.filter.call(document.querySelectorAll('.nav'), function (el) {
+      return el.getClientRects().length > 0;
+    });
+  }
+  document.addEventListener('focusin', function (e) {
+    const el = e.target;
+    if (!el.classList || !el.classList.contains('nav') || silence || lecteur()) return;
+    dire(el.getAttribute('data-parle') || el.textContent.trim(), { court: true });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const act = document.activeElement;
+    if (act && act.tagName === 'INPUT' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    if (!e.repeat && (e.key === '4' || e.key === '5' || e.key === '6')) {
+      e.preventDefault();
+      raccourci(e.key === '4' ? 'lancer' : e.key === '6' ? 'valider' : 'params');
+      return;
+    }
+    const items = navItems();
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!items.length) return;
+      if (i < 0) items[0].focus();
+      else if (i >= items.length - 1) { jouer(sonButee); items[i].focus(); }
+      else items[i + 1].focus();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!items.length) return;
+      if (i <= 0) { jouer(sonButee); items[0].focus(); }
+      else items[i - 1].focus();
+    } else if ((e.key === 'Enter' || e.key === ' ') && i >= 0) {
+      e.preventDefault();
+      if (!e.repeat) items[i].click();
+    }
+  });
+  document.addEventListener('keyup', function (e) { if (e.key === ' ') e.preventDefault(); });
+
+  /* ---------- Raccourcis ---------- */
+  function raccourci(nomR) {
+    const vue = function (v) { return !$('v-' + v).hidden; };
+    if (nomR === 'lancer') { if (vue('partie')) $('gobelet').click(); }
+    else if (nomR === 'valider') { if (vue('partie')) $('valider').click(); }
+    else if (nomR === 'params') {
+      if (vue('reglages')) $('ok-reglages').click();
+      else if (vue('accueil') || vue('partie')) $('engrenage').click();
+    }
+  }
+
+  /* ---------- Manette de jeu (Bluetooth ou USB) ----------
+     Croix directionnelle ou joystick gauche = flèches. Boutons selon leur position (Retroid Pocket 5) : droite (A) = OK, bas (B) = retour sur Lancer (ou sur la fiche), haut (X) = STOP, gauche (Y) = paramètres. Si l'appareil envoie déjà ces actions
+     comme des touches du clavier, la manette n'ajoute rien (pas de double déplacement). */
+  let touchePhys = 0;
+  document.addEventListener('keydown', function (e) { if (e.isTrusted) touchePhys = Date.now(); }, true);
+  const memManette = {};
+  let boucleManette = false;
+  function envoyerTouche(key) {
+    const t0 = Date.now();
+    setTimeout(function () {
+      if (touchePhys >= t0 - 40) return;
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true }));
+    }, 80);
+  }
+  function lireManettes() {
+    const liste = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (let g = 0; g < liste.length; g++) {
+      const gp = liste[g];
+      if (!gp || !gp.connected) continue;
+      const b = function (i) { return !!(gp.buttons[i] && gp.buttons[i].pressed); };
+      const ax = gp.axes || [];
+      const etat = {
+        ArrowUp: b(12) || ax[1] < -0.6, ArrowDown: b(13) || ax[1] > 0.6,
+        ArrowLeft: b(14) || ax[0] < -0.6, ArrowRight: b(15) || ax[0] > 0.6,
+        Enter: b(1), Lancer: b(0), Stop: b(3), Params: b(2)
+      };
+      const mem = memManette[gp.index] || (memManette[gp.index] = {});
+      Object.keys(etat).forEach(function (k) {
+        if (etat[k] && !mem[k]) {
+          if (k === 'Lancer') { const gob = $('gobelet'); if (gob.getClientRects().length) gob.focus(); }
+          else if (k === 'Stop') raccourci('valider');
+          else if (k === 'Params') raccourci('params');
+          else envoyerTouche(k);
+        }
+        mem[k] = etat[k];
+      });
+    }
+    requestAnimationFrame(lireManettes);
+  }
+  function demarrerManette() { if (!boucleManette) { boucleManette = true; requestAnimationFrame(lireManettes); } }
+  window.addEventListener('gamepadconnected', demarrerManette);
+  try { if (navigator.getGamepads && Array.prototype.some.call(navigator.getGamepads(), Boolean)) demarrerManette(); } catch (e) { /* rien */ }
+
+  /* ---------- Démarrage ---------- */
+  let double = null;
+  function placerDouble() {
+    if (!double) return;
+    const r = $('gobelet').getBoundingClientRect();
+    double.hidden = !(r.width > 0);
+    double.style.left = r.left + 'px'; double.style.top = r.top + 'px';
+    double.style.width = r.width + 'px'; double.style.height = r.height + 'px';
+  }
+  configurerNormal();
+  remiseAZero();
+  majReglages();
+  majAccueil();
+  show('accueil');
+  /* Lecteur d'écran : un second « Lancer », placé après STOP et superposé au vrai bouton, permet de passer de STOP à Lancer
+     avec la flèche de droite (le lecteur parcourt les éléments dans l'ordre de la page). */
+  if (lecteur()) {
+    double = document.createElement('button');
+    double.type = 'button';
+    double.tabIndex = -1;
+    double.setAttribute('aria-label', 'Lancer');
+    double.style.cssText = 'position:fixed;margin:0;padding:0;border:0;background:transparent;opacity:0;pointer-events:none;';
+    double.hidden = true;
+    $('valider').after(double);
+    surClic(double, function () { actionGobelet(); });
+    window.addEventListener('resize', placerDouble);
+    if (window.ResizeObserver) new ResizeObserver(placerDouble).observe($('gobelet'));
+    Array.prototype.forEach.call(document.querySelectorAll('.nav'), function (el) {
+      if (el.tagName !== 'INPUT') el.setAttribute('role', 'group');
+    });
+    construireGrille(); grilleMode = '';
+  }
+
+  if (RAPIDE || window.__test) window.__yam = { reg: reg, P: P, G: G, scoreC: scoreC, scoreCase: scoreCase, calcCol: calcCol, scoreFiche: scoreFiche, jouable: jouable, joueSolo: joueSolo, descr: descr, nom: nom, dice: dice, configurer: configurer, remiseAZero: remiseAZero, demarrer: demarrer, ETAPES: ETAPES, nouvelleFiche: nouvelleFiche, idsCases: idsCases, nbCasesTotal: nbCasesTotal, majGrille: majGrille, lancerTournoi: lancerTournoi, get T() { return T; }, jouerCase: jouerCase, suivant: suivant, SON: SON };
+})();
+</script>
