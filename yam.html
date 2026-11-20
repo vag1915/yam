@@ -39,9 +39,9 @@ body.sans-cadre .nav:focus { outline: none; }
 .scores { font-size: 15px; text-align: right; line-height: 1.5; min-width: 0; flex: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .ligne-score { padding: 1px 6px; border-radius: 6px; cursor: pointer; }
 .scores.bat { flex-direction: row; align-items: stretch; justify-content: space-around; gap: 6px; text-align: center; }
-.scores.bat .ligne-score { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; border: 2px solid #777; border-radius: 10px; padding: 3px 4px; }
-.scores.bat .sn { font-size: 15px; overflow-wrap: anywhere; line-height: 1.15; }
-.scores.bat .ss { font-size: 26px; line-height: 1.1; }
+.scores.bat .ligne-score { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; border: 2px solid #777; border-radius: 10px; padding: 1px 3px; }
+.scores.bat .sn { font-size: 13px; overflow-wrap: anywhere; line-height: 1.1; }
+.scores.bat .ss { font-size: 20px; line-height: 1.05; }
 .scores.bat .ligne-score.actif { border-color: #fff; }
 .scores.bat .ligne-score.elim { opacity: 0.4; text-decoration: line-through; }
 .scores.cible .ligne-score:not(.elim) { border-color: var(--rouge); border-width: 4px; }
@@ -62,7 +62,7 @@ body.sans-cadre .nav:focus { outline: none; }
 .tour { font-size: 18px; }
 .score-tour { font-size: 26px; line-height: 1.1; display: inline-block; padding: 0 14px; border-radius: 8px; }
 .rail { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "piste piste" "gobelet valider"; gap: 8px 16px; justify-items: center; width: 100%; padding: 0 8px; }
-.piste { grid-area: piste; position: relative; width: min(100%, 60vh); aspect-ratio: 3 / 2; border: 7px solid var(--rail); border-radius: 50%; background: radial-gradient(ellipse at 50% 35%, #1b9248 0%, var(--piste) 55%, #0e5a2b 100%); box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.55); }
+.piste { grid-area: piste; position: relative; width: min(100%, max(150px, calc(100vh - 230px))); width: min(100%, max(150px, calc(100dvh - 230px))); aspect-ratio: 1 / 1; border: 7px solid var(--rail); border-radius: 50%; background: radial-gradient(ellipse at 50% 35%, #1b9248 0%, var(--piste) 55%, #0e5a2b 100%); box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.55); }
 #gobelet { grid-area: gobelet; }
 #valider { grid-area: valider; background: #000; }
 .zone { position: absolute; inset: 0; }
@@ -74,8 +74,8 @@ body.sans-cadre .nav:focus { outline: none; }
 
 .de { position: absolute; left: 0; top: 0; width: var(--sz, 40px); height: var(--sz, 40px); background: var(--noir); border: 2px solid #555; border-radius: 18%; padding: 0; display: block; appearance: none; transition: transform 0.17s ease-out; cursor: pointer; }
 .de svg { width: 100%; height: 100%; display: block; pointer-events: none; }
-.de.kept { box-shadow: 0 0 0 3px var(--blanc); border-color: var(--blanc); }
-.de.joker { border-color: var(--blanc); animation: clignote 0.9s ease-in-out infinite; }
+.de.kept { background: #8a0f1c; border-color: #c0505c; }
+.de.joker { background: #8a0f1c; border-color: var(--blanc); animation: clignote 0.9s ease-in-out infinite; }
 @keyframes clignote { 0%, 100% { box-shadow: 0 0 0 4px #fff, 0 0 16px 6px #fff; } 50% { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1); } }
 .de.off { display: none; }
 .de:focus { outline-offset: 5px; }
@@ -112,7 +112,6 @@ body.sans-cadre .nav:focus { outline: none; }
   .jeu { flex-direction: row-reverse; align-items: stretch; gap: 14px; }
   .dessus { flex: 1 1 0; min-width: 0; justify-content: center; }
   .grille-box { flex: 0 0 auto; max-width: 68%; }
-  .piste { width: min(100%, 80vh); }
   .ico { width: 64px; height: 64px; }
 }
 @media (orientation: landscape) and (max-height: 520px) {
@@ -301,6 +300,7 @@ body.sans-cadre .nav:focus { outline: none; }
     if (RAPIDE) return;
     try {
       ac();
+      if (AC.state === 'suspended') { AC.resume().then(function () { jouer(fn, arg); }).catch(function () { }); return; }
       const d0 = suivis.length;
       fn(arg);
       if (suivis.length > d0) {
@@ -1097,7 +1097,7 @@ body.sans-cadre .nav:focus { outline: none; }
   function majDe(i) { lab(dice[i].el, texteDe(dice[i])); }
   function mesurer() {
     const W = zone.clientWidth, H = zone.clientHeight;
-    sz = Math.max(12, Math.min(W * 0.92 / NB_DES * 0.92, 90, H * 0.6));
+    sz = Math.max(12, Math.min(W * 0.88 / 5 * 0.9, 90));
     zone.style.setProperty('--sz', sz + 'px');
   }
   function pointDansPiste(W, H) {
@@ -1107,7 +1107,7 @@ body.sans-cadre .nav:focus { outline: none; }
   }
   function poserXY(d, x, y, r) { d.el.style.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + r + 'deg)'; }
   function aligner1(i) {
-    const W = zone.clientWidth, rowW = W * 0.92, slot = rowW / NB_DES;
+    const W = zone.clientWidth, rowW = W * 0.88, slot = rowW / 5;
     poserXY(dice[i], (W - rowW) / 2 + i * slot + (slot - sz) / 2, (zone.clientHeight - sz) / 2, 0);
   }
   function disposer() {
@@ -1185,8 +1185,8 @@ body.sans-cadre .nav:focus { outline: none; }
     G.lancers++;
     majInfoLancers();
     majGrille();
-    if (nouveaux.length) jouer(SON.joker);
-    else if (estYam(comptesDe(valeurs()))) jouer(sonYam);
+    if (nouveaux.length) { jouer(SON.joker); await attendre(900); }
+    else if (estYam(comptesDe(valeurs()))) { jouer(sonYam); await attendre(2300); }
     return nouveaux.length > 0;
   }
 
@@ -1327,14 +1327,39 @@ body.sans-cadre .nav:focus { outline: none; }
     const el = k === null ? headEls[c] : cellEls[c][k];
     allerA(el, 'Colonne ' + COLS[c].toLowerCase());
   }
+  function yGrille() {
+    const a = document.activeElement;
+    if (a && a.closest && a.closest('#grille')) { allerA($('gobelet'), ''); return; }
+    if (!G.enCours) return;
+    if (G.lancers > 0 && tourHumain()) { allerHautGrille(); return; }
+    G.voir = G.cur;
+    majGrille();
+    const F = G.fiches[G.cur], k = premiereCase(F, G.col);
+    const el = colonnes().length > 1 ? headEls[G.col] : cellEls[0][k === null ? idsCases()[0] : k];
+    allerA(el, 'Grille');
+  }
+  function caseConseillee() {
+    const F = G.fiches[G.cur], vals = valeurs(), ctx = contexte('Pro', F);
+    let best = null, bv = -1e9;
+    for (let c = 0; c < F.cols.length; c++) {
+      idsCases().forEach(function (k) {
+        if (!jouable(F, c, k)) return;
+        const s = scoreCase(F, c, k, vals);
+        let v = ctx.adj(k, k === MINI ? 30 - s : s);
+        if (c > 0 && s > 0) v += 12;
+        if (v > bv) { bv = v; best = { c: c, k: k }; }
+      });
+    }
+    return best;
+  }
   function allerHautGrille() {
     G.voir = G.cur;
-    const F = G.fiches[G.cur];
-    if (colonnes().length > 1 && !colonneOuverte(F, G.col)) { for (let c = 0; c < colonnes().length; c++) if (colonneOuverte(F, c)) { G.col = c; break; } }
+    const b = caseConseillee();
+    if (b) G.col = b.c;
     majGrille();
     let el;
-    if (colonnes().length > 1) el = headEls[G.col];
-    else { const k = premiereCase(F, 0); el = k === null ? cellEls[0][idsCases()[0]] : cellEls[0][k]; }
+    if (b) el = cellEls[b.c][b.k];
+    else el = colonnes().length > 1 ? headEls[G.col] : cellEls[0][idsCases()[0]];
     return allerA(el, 'Grille');
   }
 
@@ -1430,8 +1455,8 @@ body.sans-cadre .nav:focus { outline: none; }
       majDe(i);
       majGrille();
       jouer(sonGarder);
-      if (!etaitYam && estYam(comptesDe(valeurs()))) jouer(sonYam);
-      dire('Joker, ' + d.v, { court: true });
+      if (!etaitYam && estYam(comptesDe(valeurs()))) { jouer(sonYam); setTimeout(function () { dire('Joker, ' + d.v, { court: true }); }, 2300); }
+      else dire('Joker, ' + d.v, { court: true });
       return;
     }
     d.held = !d.held;
@@ -1468,18 +1493,17 @@ body.sans-cadre .nav:focus { outline: none; }
     majGrille();
     msg(robot ? nomJ + ' : ' + LIB[k] + ' ' + s : '');
     const t = scoreFiche(F);
-    await attendre(s > 0 ? 700 : 350);
+    await attendre(s > 0 ? 700 : 2000);
     if (!vivant(tk)) return;
     const col = colonnes().length > 1 ? ', ' + COLS[c].toLowerCase() : '';
     let txt;
     if (robot) txt = s > 0 ? nomJ + ' marque ' + pts(s) + ', ' + PARLE[k].toLowerCase() + col + '.' : nomJ + ' barre ' + PARLE[k].toLowerCase() + col + '.';
     else txt = s > 0 ? PARLE[k] + col + ', ' + pts(s) + '.' : PARLE[k] + col + ' barré. Zéro point.';
     if (bonus) txt += ' Yam supplémentaire : 100 points de bonus.';
-    if (!robot && k < 6) txt += ' Total du haut, ' + apres.haut + '.';
     if (apres.p35 && !avant.p35) txt += ' Prime de 35 points atteinte.';
     if (apres.p100 && !avant.p100) txt += ' Prime de 100 points atteinte.';
     if (!robot && (k === MAXI || k === MINI) && apres.diff !== null) txt += ' Différence entre maxi et mini, ' + nombre(apres.diff) + '.';
-    await dire(txt + ' Total, ' + t + '.');
+    await dire(txt);
     if (!vivant(tk)) return;
     await attendre(250);
     if (!vivant(tk)) return;
@@ -1542,7 +1566,7 @@ body.sans-cadre .nav:focus { outline: none; }
     const intro = (robot ? nomJ + ' joue ' : '') + PARLE[k].toLowerCase() + ', ' + pts(s) + '. ';
     if (k < 6) {
       if (s > 0) { jouer(SON.coeur); F.pv += s; majScores(); await dire(intro + nomJ + ' gagne ' + pts(s) + ' et a maintenant ' + pts(F.pv) + '.'); }
-      else { jouer(sonFarkle); await dire(intro + 'Aucun point gagné.'); }
+      else { jouer(sonFarkle); await attendre(2000); await dire(intro + 'Aucun point gagné.'); }
       return;
     }
     if (k === CH) {
@@ -1563,7 +1587,7 @@ body.sans-cadre .nav:focus { outline: none; }
       }
       return;
     }
-    if (s <= 0) { jouer(sonFarkle); await dire(intro + 'Attaque ratée.'); return; }
+    if (s <= 0) { jouer(sonFarkle); await attendre(2000); await dire(intro + 'Attaque ratée.'); return; }
     jouer(SON.epees);
     await dire(intro + 'Attaque !');
     if (!vivant(tk)) return;
@@ -2077,9 +2101,9 @@ body.sans-cadre .nav:focus { outline: none; }
       const mem = memManette[gp.index] || (memManette[gp.index] = {});
       Object.keys(etat).forEach(function (k) {
         if (etat[k] && !mem[k]) {
-          if (k === 'Lancer') { const gob = $('gobelet'); if (gob.getClientRects().length) gob.focus(); }
+          if (k === 'Lancer') { const gob = $('gobelet'); if (gob.getClientRects().length) { gob.focus(); gob.click(); } }
           else if (k === 'Stop') raccourci('valider');
-          else if (k === 'Params') raccourci('params');
+          else if (k === 'Params') { if (vue('partie')) yGrille(); else raccourci('params'); }
           else envoyerTouche(k);
         }
         mem[k] = etat[k];
@@ -2105,6 +2129,7 @@ body.sans-cadre .nav:focus { outline: none; }
   majReglages();
   majAccueil();
   show('accueil');
+  try { if (!RAPIDE && natif()) ac(); } catch (e) { /* sans son */ }
   /* Lecteur d'écran : un second « Lancer », placé après STOP et superposé au vrai bouton, permet de passer de STOP à Lancer
      avec la flèche de droite (le lecteur parcourt les éléments dans l'ordre de la page). */
   if (lecteur()) {
