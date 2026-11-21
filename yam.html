@@ -404,11 +404,11 @@ body.sans-cadre .nav:focus { outline: none; }
   }
   /* Lancer : arpège descendant au piano, une note par dé lancé. */
   function sonLancer(n) {
-    const t = AC.currentTime + 0.02;
-    const gamme = [91, 88, 84, 79, 76, 72];
+    const t = AC.currentTime + 0.02, g = [76, 72, 69, 64, 60, 57];
     for (let i = 0; i < n; i++) {
-      const dernier = i === n - 1;
-      piano(t + i * 0.085, gamme[i], 0.95 - 0.35 * (i / 5), dernier ? 1.8 : 1.1);
+      const f = midiHz(g[i]), tt = t + i * 0.11, d = i === n - 1 ? 1.8 : 1.0;
+      tone(tt, f, f, 'sine', 0.3, d, 0.006, 0.3);
+      tone(tt, f * 2.01, f * 2.01, 'sine', 0.08, d * 0.5, 0.006, 0.3);
     }
   }
   function cuivre(t, midi, vel, dur) {
@@ -735,7 +735,7 @@ body.sans-cadre .nav:focus { outline: none; }
           const id = String(++ttsId);
           ttsAttente[id] = fin;
           window.AndroidTTS.speak(texte, id, !!opt.ajouter);
-          setTimeout(fin, lecteur() ? estimer(texte) : 1800 + texte.length * 110);
+          setTimeout(fin, lecteur() ? Math.round(estimer(texte) * (opt.ratio || 1)) : 1800 + texte.length * 110);
           return;
         }
         speechSynthesis.cancel();
@@ -1218,11 +1218,12 @@ body.sans-cadre .nav:focus { outline: none; }
       for (let c = 0; c < nc; c++) {
         const h = mk('gc entete nav', 'button');
         h.type = 'button'; h.textContent = COLS[c].charAt(0);
+        h.dataset.r = '-1'; h.dataset.c = String(c);
         surClic(h, function () { activerColonne(c); });
         box.appendChild(h); headEls.push(h);
       }
     }
-    lignes().forEach(function (L) {
+    lignes().forEach(function (L, ri) {
       const gl = mk('gl');
       gl.textContent = L.t ? LIB_CALC[L.t] : LIB[L.k];
       gl.setAttribute('aria-hidden', 'true');
@@ -1232,11 +1233,13 @@ body.sans-cadre .nav:focus { outline: none; }
           const e = mk('gc calc nav');
           e.tabIndex = 0;
           surClic(e, function () { dire(e.getAttribute('data-parle')); });
+          e.dataset.r = String(ri); e.dataset.c = String(c);
           box.appendChild(e); calcEls[c][L.t] = e;
         } else {
           const e = mk('gc nav', 'button');
           e.type = 'button';
           surClic(e, function () { actionCase(c, L.k); });
+          e.dataset.r = String(ri); e.dataset.c = String(c);
           box.appendChild(e); cellEls[c][L.k] = e;
         }
       }
@@ -1268,8 +1271,8 @@ body.sans-cadre .nav:focus { outline: none; }
       };
       idsCases().forEach(function (k) {
         const el = cellEls[c][k];
-        pose(el, actif);
-        let texte = '', parle = '', classe = 'gc' + (actif ? ' nav' : '');
+        pose(el, true);
+        let texte = '', parle = '', classe = 'gc nav';
         const ok = jouable(F, c, k);
         const s = live ? scoreCase(F, c, k, vals) : null;
         if (bat) {
@@ -1296,8 +1299,8 @@ body.sans-cadre .nav:focus { outline: none; }
         const set = function (id, texte, parle) {
           const el = calcEls[c][id];
           if (!el) return;
-          pose(el, actif);
-          el.className = 'gc calc' + (actif ? ' nav' : '');
+          pose(el, true);
+          el.className = 'gc calc nav';
           el.textContent = texte;
           lab(el, parle + (nomC ? ', ' + nomC : ''));
         };
@@ -1336,7 +1339,7 @@ body.sans-cadre .nav:focus { outline: none; }
     majGrille();
     const F = G.fiches[G.cur], k = premiereCase(F, G.col);
     const el = colonnes().length > 1 ? headEls[G.col] : cellEls[0][k === null ? idsCases()[0] : k];
-    allerA(el, 'Grille');
+    allerA(el, '');
   }
   function caseConseillee() {
     const F = G.fiches[G.cur], vals = valeurs(), ctx = contexte('Pro', F);
@@ -1360,7 +1363,7 @@ body.sans-cadre .nav:focus { outline: none; }
     let el;
     if (b) el = cellEls[b.c][b.k];
     else el = colonnes().length > 1 ? headEls[G.col] : cellEls[0][idsCases()[0]];
-    return allerA(el, 'Grille');
+    return allerA(el, '');
   }
 
   /* =====================================================================
@@ -1402,9 +1405,9 @@ body.sans-cadre .nav:focus { outline: none; }
     } else {
       G.busy = false;
       if (lecteur()) {
-        await dire('Tour de ' + nom(G.cur));
+        await dire('Tour de ' + nom(G.cur), { ratio: 0.7 });
         if (!vivant(tk)) return;
-        await attendre(250);
+        await attendre(40);
         if (!vivant(tk)) return;
         focusSilencieux($('gobelet'));
       } else {
@@ -1419,10 +1422,9 @@ body.sans-cadre .nav:focus { outline: none; }
     if (!vivant(tk)) return;
     const txt = listeVoix(G.dernier);
     if (G.lancers >= 3) {
-      await dire(txt + '. Choisissez une case.');
+      await dire(txt);
       if (!vivant(tk)) return;
       G.busy = false;
-      await allerHautGrille();
     } else {
       G.busy = false;
       dire(txt);
@@ -1431,7 +1433,7 @@ body.sans-cadre .nav:focus { outline: none; }
   function actionGobelet() {
     try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
     if (!tourHumain()) return;
-    if (G.lancers >= 3) { feedback('Plus de lancers. Choisissez une case.'); allerHautGrille(); return; }
+    if (G.lancers >= 3) { feedback('Plus de lancers.'); return; }
     if (G.lancers > 0 && dice.every(function (d) { return d.held; })) { feedback('Libérez au moins un dé pour relancer.'); return; }
     G.voir = G.cur;
     lancerHumain(G.token).catch(erreur);
@@ -1498,12 +1500,12 @@ body.sans-cadre .nav:focus { outline: none; }
     const col = colonnes().length > 1 ? ', ' + COLS[c].toLowerCase() : '';
     let txt;
     if (robot) txt = s > 0 ? nomJ + ' marque ' + pts(s) + ', ' + PARLE[k].toLowerCase() + col + '.' : nomJ + ' barre ' + PARLE[k].toLowerCase() + col + '.';
-    else txt = s > 0 ? PARLE[k] + col + ', ' + pts(s) + '.' : PARLE[k] + col + ' barré. Zéro point.';
+    else txt = '';
     if (bonus) txt += ' Yam supplémentaire : 100 points de bonus.';
     if (apres.p35 && !avant.p35) txt += ' Prime de 35 points atteinte.';
     if (apres.p100 && !avant.p100) txt += ' Prime de 100 points atteinte.';
     if (!robot && (k === MAXI || k === MINI) && apres.diff !== null) txt += ' Différence entre maxi et mini, ' + nombre(apres.diff) + '.';
-    await dire(txt);
+    if (txt.trim()) await dire(txt.trim());
     if (!vivant(tk)) return;
     await attendre(250);
     if (!vivant(tk)) return;
@@ -1548,7 +1550,7 @@ body.sans-cadre .nav:focus { outline: none; }
     if (cands.length === 1) return cands[0];
     const p = new Promise(function (resolve) { G.cible = { source: i, resolve: resolve }; });
     box_cible();
-    await allerA($('sc-' + cands[0]), 'Choisissez le joueur à attaquer');
+    await allerA($('sc-' + cands[0]), 'Choisissez un joueur');
     return p;
   }
   async function subir(t, n, tk) {
@@ -1565,7 +1567,7 @@ body.sans-cadre .nav:focus { outline: none; }
     majGrille();
     const intro = (robot ? nomJ + ' joue ' : '') + PARLE[k].toLowerCase() + ', ' + pts(s) + '. ';
     if (k < 6) {
-      if (s > 0) { jouer(SON.coeur); F.pv += s; majScores(); await dire(intro + nomJ + ' gagne ' + pts(s) + ' et a maintenant ' + pts(F.pv) + '.'); }
+      if (s > 0) { jouer(SON.coeur); await attendre(1100); if (!vivant(tk)) return; F.pv += s; majScores(); await dire(intro + nomJ + ' gagne ' + pts(s) + ' et a maintenant ' + pts(F.pv) + '.'); }
       else { jouer(sonFarkle); await attendre(2000); await dire(intro + 'Aucun point gagné.'); }
       return;
     }
@@ -1587,9 +1589,11 @@ body.sans-cadre .nav:focus { outline: none; }
       }
       return;
     }
-    if (s <= 0) { jouer(sonFarkle); await attendre(2000); await dire(intro + 'Attaque ratée.'); return; }
+    if (s <= 0) { jouer(sonFarkle); await attendre(2000); await dire(intro + 'Zéro point.'); return; }
     jouer(SON.epees);
-    await dire(intro + 'Attaque !');
+    await attendre(1100);
+    if (!vivant(tk)) return;
+    await dire(intro.trim());
     if (!vivant(tk)) return;
     const t = await choisirCible(i, tk, robot);
     if (!vivant(tk) || t === null) return;
@@ -2032,6 +2036,18 @@ body.sans-cadre .nav:focus { outline: none; }
     if (!el.classList || !el.classList.contains('nav') || silence || lecteur()) return;
     dire(el.getAttribute('data-parle') || el.textContent.trim(), { court: true });
   });
+  /* Mode avancé : les flèches se déplacent dans la grille (haut/bas = lignes, gauche/droite = colonnes). */
+  function nav2D(act, key) {
+    if (!act || !act.dataset || act.dataset.r === undefined || P.mode !== 'standard') return false;
+    let r = +act.dataset.r, c = +act.dataset.c;
+    const nr = lignes().length, nc = colonnes().length;
+    if (key === 'ArrowDown') r++; else if (key === 'ArrowUp') r--; else if (key === 'ArrowRight') c++; else c--;
+    if (r < -1) return false;
+    if (r >= nr || c < 0 || c >= nc) { jouer(sonButee); return true; }
+    const cible = document.querySelector('#grille [data-r="' + r + '"][data-c="' + c + '"]');
+    if (cible) cible.focus();
+    return true;
+  }
   document.addEventListener('keydown', function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const act = document.activeElement;
@@ -2041,6 +2057,7 @@ body.sans-cadre .nav:focus { outline: none; }
       raccourci(e.key === '4' ? 'lancer' : e.key === '6' ? 'valider' : 'params');
       return;
     }
+    if (!lecteur() && /^Arrow(Up|Down|Left|Right)$/.test(e.key) && nav2D(act, e.key)) { e.preventDefault(); return; }
     const items = navItems();
     const i = items.indexOf(document.activeElement);
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
@@ -2129,6 +2146,7 @@ body.sans-cadre .nav:focus { outline: none; }
   majReglages();
   majAccueil();
   show('accueil');
+  setTimeout(function () { try { $('nouvelle').focus(); } catch (e) { /* rien */ } }, 400);
   try { if (!RAPIDE && natif()) ac(); } catch (e) { /* sans son */ }
   /* Lecteur d'écran : un second « Lancer », placé après STOP et superposé au vrai bouton, permet de passer de STOP à Lancer
      avec la flèche de droite (le lecteur parcourt les éléments dans l'ordre de la page). */
