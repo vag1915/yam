@@ -1271,8 +1271,8 @@ body.sans-cadre .nav:focus { outline: none; }
       };
       idsCases().forEach(function (k) {
         const el = cellEls[c][k];
-        pose(el, true);
-        let texte = '', parle = '', classe = 'gc nav';
+        pose(el, actif);
+        let texte = '', parle = '', classe = 'gc' + (actif ? ' nav' : '');
         const ok = jouable(F, c, k);
         const s = live ? scoreCase(F, c, k, vals) : null;
         if (bat) {
@@ -1299,8 +1299,8 @@ body.sans-cadre .nav:focus { outline: none; }
         const set = function (id, texte, parle) {
           const el = calcEls[c][id];
           if (!el) return;
-          pose(el, true);
-          el.className = 'gc calc nav';
+          pose(el, actif);
+          el.className = 'gc calc' + (actif ? ' nav' : '');
           el.textContent = texte;
           lab(el, parle + (nomC ? ', ' + nomC : ''));
         };
@@ -1355,7 +1355,7 @@ body.sans-cadre .nav:focus { outline: none; }
     }
     return best;
   }
-  function allerHautGrille() {
+  function allerHautGrille(annonce) {
     G.voir = G.cur;
     const b = caseConseillee();
     if (b) G.col = b.c;
@@ -1363,7 +1363,7 @@ body.sans-cadre .nav:focus { outline: none; }
     let el;
     if (b) el = cellEls[b.c][b.k];
     else el = colonnes().length > 1 ? headEls[G.col] : cellEls[0][idsCases()[0]];
-    return allerA(el, '');
+    return allerA(el, annonce && el ? (el.getAttribute('data-parle') || el.textContent.trim()) : '');
   }
 
   /* =====================================================================
@@ -1438,12 +1438,17 @@ body.sans-cadre .nav:focus { outline: none; }
     G.voir = G.cur;
     lancerHumain(G.token).catch(erreur);
   }
-  function actionValider() {
+  async function actionValider() {
     try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
     if (!tourHumain()) return;
     if (G.lancers === 0) { feedback('Lancez d’abord les dés.'); return; }
+    const tk = G.token;
+    G.busy = true;
     jouer(sonStop);
-    allerHautGrille();
+    await attendre(1000);
+    G.busy = false;
+    if (!vivant(tk)) return;
+    allerHautGrille(true);
   }
   function actionDe(i) {
     try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
@@ -1832,13 +1837,18 @@ body.sans-cadre .nav:focus { outline: none; }
     configurerNormal();
     demarrer('').catch(erreur);
   }
+  function annonceAccueil() {
+    const n = $('nouvelle'), sm = n.querySelector('small');
+    const t = 'Nouvelle partie' + (sm ? '. ' + sm.textContent.trim() : '');
+    if (lecteur()) { focusSilencieux(n); dire(t); } else { n.focus(); dire(t); }
+  }
   function retourAccueil() {
     abandonner();
     configurerNormal();
     remiseAZero();
     show('accueil');
     majAccueil();
-    $('nouvelle').focus();
+    annonceAccueil();
   }
   function majAccueil() {
     const n = $('nouvelle'), m = MODE_TXT[reg.mode] + (reg.mode === 'defi' && reg.etape > 0 ? ', étape ' + (reg.etape + 1) + ' sur ' + ETAPES.length : '');
@@ -2036,18 +2046,6 @@ body.sans-cadre .nav:focus { outline: none; }
     if (!el.classList || !el.classList.contains('nav') || silence || lecteur()) return;
     dire(el.getAttribute('data-parle') || el.textContent.trim(), { court: true });
   });
-  /* Mode avancé : les flèches se déplacent dans la grille (haut/bas = lignes, gauche/droite = colonnes). */
-  function nav2D(act, key) {
-    if (!act || !act.dataset || act.dataset.r === undefined || P.mode !== 'standard') return false;
-    let r = +act.dataset.r, c = +act.dataset.c;
-    const nr = lignes().length, nc = colonnes().length;
-    if (key === 'ArrowDown') r++; else if (key === 'ArrowUp') r--; else if (key === 'ArrowRight') c++; else c--;
-    if (r < -1) return false;
-    if (r >= nr || c < 0 || c >= nc) { jouer(sonButee); return true; }
-    const cible = document.querySelector('#grille [data-r="' + r + '"][data-c="' + c + '"]');
-    if (cible) cible.focus();
-    return true;
-  }
   document.addEventListener('keydown', function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const act = document.activeElement;
@@ -2057,7 +2055,6 @@ body.sans-cadre .nav:focus { outline: none; }
       raccourci(e.key === '4' ? 'lancer' : e.key === '6' ? 'valider' : 'params');
       return;
     }
-    if (!lecteur() && /^Arrow(Up|Down|Left|Right)$/.test(e.key) && nav2D(act, e.key)) { e.preventDefault(); return; }
     const items = navItems();
     const i = items.indexOf(document.activeElement);
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
@@ -2146,7 +2143,7 @@ body.sans-cadre .nav:focus { outline: none; }
   majReglages();
   majAccueil();
   show('accueil');
-  setTimeout(function () { try { $('nouvelle').focus(); } catch (e) { /* rien */ } }, 400);
+  setTimeout(function () { try { annonceAccueil(); } catch (e) { /* rien */ } }, 600);
   try { if (!RAPIDE && natif()) ac(); } catch (e) { /* sans son */ }
   /* Lecteur d'écran : un second « Lancer », placé après STOP et superposé au vrai bouton, permet de passer de STOP à Lancer
      avec la flèche de droite (le lecteur parcourt les éléments dans l'ordre de la page). */
