@@ -114,12 +114,7 @@ body.sans-cadre .nav:focus { outline: none; }
   .grille-box { flex: 0 0 auto; max-width: 68%; }
   .ico { width: 64px; height: 64px; }
 }
-@media (orientation: landscape) and (max-height: 520px) {
-  .score-tour { font-size: 20px; }
-  .tour { font-size: 15px; }
-  .message { min-height: 20px; font-size: 16px; }
-}
-@media (max-width: 559px) {
+@media (max-width: 559px), (orientation: landscape) {
   .grille { --cw: 52px; gap: 4px; grid-template-columns: 66px repeat(var(--nc, 1), var(--cw)); }
   .gc { font-size: 16px; min-height: 36px; }
   .gl { font-size: 12px; line-height: 1.05; overflow-wrap: anywhere; }
@@ -132,6 +127,12 @@ body.sans-cadre .nav:focus { outline: none; }
   .grille.bataille .gc { font-size: 18px; }
   .ico { width: 52px; height: 52px; }
   .rail { padding: 0; gap: 6px 8px; }
+}
+/* Paysage : on garde la mise en page du portrait (écran étroit), réduite pour tenir en hauteur et centrée, avec du noir de chaque côté. */
+@media (orientation: landscape) {
+  html, body { overflow: hidden; }
+  body { padding: 0; }
+  .ecran { position: absolute; left: 50%; top: 0; width: 380px; height: 820px; max-width: none; margin: 0; transform-origin: top center; transform: translateX(-50%) scale(var(--ech, 1)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .de { transition: none; }
@@ -171,7 +172,7 @@ body.sans-cadre .nav:focus { outline: none; }
       <div class="dessus" id="dessus">
         <div class="infos">
           <div class="tour" id="tour-de"></div>
-          <div class="score-tour nav" id="info-lancers" tabindex="0" role="group" aria-label="Trois lancers disponibles" data-parle="Trois lancers disponibles">Lancer 1 sur 3</div>
+          <div class="score-tour nav" id="info-lancers" tabindex="0" role="group" aria-label="Pas encore lancé" data-parle="Pas encore lancé"></div>
         </div>
         <div class="rail" id="rail">
           <button class="ico nav" id="gobelet" type="button" aria-label="Lancer" data-parle="Lancer">
@@ -1132,8 +1133,8 @@ body.sans-cadre .nav:focus { outline: none; }
   }
   function majInfoLancers() {
     const e = $('info-lancers');
-    e.textContent = G.lancers === 0 ? 'Lancer 1 sur 3' : (G.lancers >= 3 ? 'Dernier lancer fait' : 'Lancer ' + (G.lancers + 1) + ' sur 3');
-    lab(e, G.lancers === 0 ? 'Trois lancers disponibles' : (G.lancers >= 3 ? 'Plus de lancers' : 'Il reste ' + (3 - G.lancers) + (3 - G.lancers > 1 ? ' lancers' : ' lancer')));
+    e.textContent = G.lancers === 0 ? '' : (G.lancers >= 3 ? 'Dernier lancer' : 'Lancer ' + G.lancers);
+    lab(e, G.lancers === 0 ? 'Pas encore lancé' : (G.lancers >= 3 ? 'Dernier lancer' : 'Lancer ' + G.lancers));
   }
 
   /* Lance les dés qui ne sont pas gardés (animation, puis dés alignés). Rend vrai si un joker est apparu. */
@@ -1837,6 +1838,14 @@ body.sans-cadre .nav:focus { outline: none; }
     configurerNormal();
     demarrer('').catch(erreur);
   }
+  function echelle() {
+    try {
+      const paysage = window.matchMedia('(orientation: landscape)').matches;
+      document.documentElement.style.setProperty('--ech', paysage ? String(Math.min(window.innerHeight / 820, window.innerWidth / 380)) : '1');
+    } catch (e) { /* rien */ }
+  }
+  window.addEventListener('resize', echelle);
+  echelle();
   function annonceAccueil() {
     const n = $('nouvelle'), sm = n.querySelector('small');
     const t = 'Nouvelle partie' + (sm ? '. ' + sm.textContent.trim() : '');
@@ -2141,6 +2150,7 @@ body.sans-cadre .nav:focus { outline: none; }
   configurerNormal();
   remiseAZero();
   majReglages();
+  echelle();
   majAccueil();
   show('accueil');
   setTimeout(function () { try { annonceAccueil(); } catch (e) { /* rien */ } }, 600);
