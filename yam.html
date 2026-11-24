@@ -108,32 +108,44 @@ body.sans-cadre .nav:focus { outline: none; }
 .gagnant { font-size: clamp(28px, 7vw, 42px); text-align: center; text-transform: uppercase; padding: 20px 8px; line-height: 1.15; border-radius: 10px; }
 .info-fin { font-size: 20px; text-align: center; padding: 6px 8px; border-radius: 8px; }
 
+/* En partie, l'engrenage et les scores passent dans la colonne de droite : la grille monte jusqu'en haut de l'écran. */
+.dessus > .haut { flex-direction: column; align-items: center; width: 100%; padding: 0; gap: 2px; }
+.dessus .scores { flex: none; width: 100%; align-items: center; text-align: center; font-size: 14px; line-height: 1.3; }
+.dessus .scores.bat { flex-direction: column; align-items: stretch; }
+.grille.standard .gc { min-height: 29px; }
 @media all {
   .jeu { flex-direction: row-reverse; align-items: stretch; gap: 14px; }
   .dessus { flex: 1 1 0; min-width: 0; justify-content: center; }
   .grille-box { flex: 0 0 auto; max-width: 68%; }
   .ico { width: 64px; height: 64px; }
 }
-@media (max-width: 559px), (orientation: landscape) {
+@media (orientation: landscape) {
+  .piste { aspect-ratio: 2 / 1; width: min(100%, max(240px, calc((100vh - 230px) * 2))); width: min(100%, max(240px, calc((100dvh - 230px) * 2))); }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .score-tour { font-size: 20px; }
+  .tour { font-size: 15px; }
+  .message { min-height: 20px; font-size: 16px; }
+}
+@media (max-width: 559px) {
   .grille { --cw: 52px; gap: 4px; grid-template-columns: 66px repeat(var(--nc, 1), var(--cw)); }
   .gc { font-size: 16px; min-height: 36px; }
   .gl { font-size: 12px; line-height: 1.05; overflow-wrap: anywhere; }
   .gc.entete { font-size: 20px; }
-  .grille.standard { --cw: 40px; grid-template-columns: 112px repeat(var(--nc, 1), var(--cw)); }
-  .grille.standard .gl { font-size: 14px; }
+  .grille.standard { --cw: 38px; gap: 3px 4px; grid-template-columns: 98px repeat(var(--nc, 1), var(--cw)); }
+  .grille.standard .gl { font-size: 13px; }
   .grille.standard .gc { font-size: 15px; }
   .grille.bataille { --cw: 64px; grid-template-columns: 104px repeat(var(--nc, 1), var(--cw)); }
   .grille.bataille .gl { font-size: 14px; }
   .grille.bataille .gc { font-size: 18px; }
-  .ico { width: 52px; height: 52px; }
+  .ico { width: 46px; height: 46px; }
   .rail { padding: 0; gap: 6px 8px; }
 }
-/* Paysage : on garde la mise en page du portrait (écran étroit), réduite pour tenir en hauteur et centrée, avec du noir de chaque côté. */
-@media (orientation: landscape) {
-  html, body { overflow: hidden; }
-  body { padding: 0; }
-  .ecran { position: absolute; left: 50%; top: 0; width: 380px; height: 820px; max-width: none; margin: 0; transform-origin: top center; transform: translateX(-50%) scale(var(--ech, 1)); }
-}
+/* Dés blancs à points noirs (option) */
+body.des-blancs .de { background: #fff; border-color: #888; }
+body.des-blancs .de svg circle { fill: #000; }
+body.des-blancs .de.kept, body.des-blancs .de.joker { background: #8a0f1c; }
+body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill: #fff; }
 @media (prefers-reduced-motion: reduce) {
   .de { transition: none; }
   .de.joker { animation: none; box-shadow: 0 0 0 5px #fff, 0 0 16px 6px #fff; }
@@ -626,6 +638,7 @@ body.sans-cadre .nav:focus { outline: none; }
     nb: 2,
     voix: true,
     cadres: true,
+    desBlancs: false,
     mode: 'rapide',
     joker: false,
     pv: 200,
@@ -645,6 +658,7 @@ body.sans-cadre .nav:focus { outline: none; }
       if (s.nb >= 1 && s.nb <= 4) reg.nb = s.nb | 0;
       if (typeof s.voix === 'boolean') reg.voix = s.voix;
       if (typeof s.cadres === 'boolean') reg.cadres = s.cadres;
+      if (typeof s.desBlancs === 'boolean') reg.desBlancs = s.desBlancs;
       if (typeof s.joker === 'boolean') reg.joker = s.joker;
       if (MODES_ALL.indexOf(s.mode) >= 0) reg.mode = s.mode;
       if (PV_CHOIX.indexOf(s.pv) >= 0) reg.pv = s.pv;
@@ -1198,14 +1212,14 @@ body.sans-cadre .nav:focus { outline: none; }
     const L = [];
     for (let k = 0; k < 6; k++) L.push({ k: k });
     if (P.mode === 'bataille') { [CH, BR, CA, FU, PS, GS, YA].forEach(function (k) { L.push({ k: k }); }); return L; }
-    L.push({ t: 'haut' }, { t: 'p35' }, { t: 'p100' }, { t: 'hautTot' });
+    L.push({ t: 'prime' }, { t: 'hautTot' });
     if (P.mode === 'standard') L.push({ k: MAXI }, { k: MINI }, { t: 'diff' }, { k: CH }, { k: PA }, { k: DP });
     else L.push({ k: CH });
     [BR, CA, FU, PS, GS, YA].forEach(function (k) { L.push({ k: k }); });
     L.push({ t: 'bonus' }, { t: 'bas' }, { t: 'total' });
     return L;
   }
-  const LIB_CALC = { haut: 'Total haut', p35: 'Prime 35', p100: 'Prime 100', hautTot: 'Haut + primes', diff: 'Maxi − mini', bonus: 'Bonus yam', bas: 'Total bas', total: 'Total' };
+  const LIB_CALC = { prime: 'Prime', hautTot: 'Total haut', diff: 'Maxi − mini', bonus: 'Bonus yam', bas: 'Total bas', total: 'Total' };
   function construireGrille() {
     const box = $('grille'), nc = colonnes().length;
     box.innerHTML = '';
@@ -1305,10 +1319,9 @@ body.sans-cadre .nav:focus { outline: none; }
           el.textContent = texte;
           lab(el, parle + (nomC ? ', ' + nomC : ''));
         };
-        set('haut', String(t.haut), 'Total du haut, ' + t.haut + ' sur 63');
-        set('p35', String(t.p35), t.p35 ? 'Prime de 35 points, acquise' : 'Prime de 35 points, il manque ' + (63 - t.haut) + ' points');
-        set('p100', String(t.p100), t.p100 ? 'Prime de 100 points, acquise' : 'Prime de 100 points, il manque ' + (84 - t.haut) + ' points');
-        set('hautTot', String(t.hautTot), 'Total du haut avec les primes, ' + t.hautTot);
+        const primeTot = t.p35 + t.p100;
+        set('prime', String(primeTot), primeTot ? 'Prime, ' + pts(primeTot) + ' acquis' : 'Prime, pas encore. Total des chiffres ' + t.haut + '. Il manque ' + (63 - t.haut > 0 ? (63 - t.haut) : 0) + ' points pour 35 points de prime, et ' + (84 - t.haut > 0 ? (84 - t.haut) : 0) + ' pour 100 points de prime');
+        set('hautTot', String(t.hautTot), 'Total du haut, ' + t.hautTot);
         set('diff', t.diff === null ? '—' : String(t.diff), t.diff === null ? 'Maxi moins mini, pas encore calculé' : 'Maxi moins mini, ' + nombre(t.diff));
         set('bonus', String(t.bonus), 'Bonus yam, ' + pts(t.bonus));
         set('bas', String(t.bas), 'Total du bas, ' + t.bas);
@@ -1449,7 +1462,7 @@ body.sans-cadre .nav:focus { outline: none; }
     await attendre(1000);
     G.busy = false;
     if (!vivant(tk)) return;
-    allerHautGrille(true);
+    allerHautGrille();
   }
   function actionDe(i) {
     try { if (!RAPIDE) ac(); } catch (e) { /* sans son */ }
@@ -1795,6 +1808,7 @@ body.sans-cadre .nav:focus { outline: none; }
     VUES.forEach(function (x) { $('v-' + x).hidden = x !== v; });
     $('haut').hidden = !(v === 'accueil' || v === 'partie');
     $('scores').hidden = v !== 'partie';
+    if (v === 'partie') $('dessus').prepend($('haut')); else if ($('haut').parentNode !== $('ecran')) $('ecran').prepend($('haut'));
     if (v === 'partie') { disposer(); majGrille(); placerDouble(); }
   }
   function abandonner() {
@@ -1824,6 +1838,7 @@ body.sans-cadre .nav:focus { outline: none; }
     const tk = G.token;
     if (intro) {
       msg(intro);
+      if (lecteur()) { await attendre(1800); if (!vivant(tk)) return; }
       await dire(intro);
       if (!vivant(tk)) return;
     }
@@ -1838,18 +1853,9 @@ body.sans-cadre .nav:focus { outline: none; }
     configurerNormal();
     demarrer('').catch(erreur);
   }
-  function echelle() {
-    try {
-      const paysage = window.matchMedia('(orientation: landscape)').matches;
-      document.documentElement.style.setProperty('--ech', paysage ? String(Math.min(window.innerHeight / 820, window.innerWidth / 380)) : '1');
-    } catch (e) { /* rien */ }
-  }
-  window.addEventListener('resize', echelle);
-  echelle();
   function annonceAccueil() {
-    const n = $('nouvelle'), sm = n.querySelector('small');
-    const t = 'Nouvelle partie' + (sm ? '. ' + sm.textContent.trim() : '');
-    if (lecteur()) { focusSilencieux(n); dire(t); } else { n.focus(); dire(t); }
+    /* Le lecteur d'écran du SensePlayer annonce d'abord « lanceur » puis « vue web » : on attend qu'il ait fini. */
+    setTimeout(function () { try { $('nouvelle').focus(); } catch (e) { /* rien */ } }, lecteur() ? 2600 : 500);
   }
   function retourAccueil() {
     abandonner();
@@ -1857,7 +1863,7 @@ body.sans-cadre .nav:focus { outline: none; }
     remiseAZero();
     show('accueil');
     majAccueil();
-    annonceAccueil();
+    $('nouvelle').focus();
   }
   function majAccueil() {
     const n = $('nouvelle'), m = MODE_TXT[reg.mode] + (reg.mode === 'defi' && reg.etape > 0 ? ', étape ' + (reg.etape + 1) + ' sur ' + ETAPES.length : '');
@@ -1872,7 +1878,8 @@ body.sans-cadre .nav:focus { outline: none; }
     $(parent || 'r-liste').appendChild(b);
     return b;
   }
-  const rMode = btnReglage('r-mode'), rJoker = btnReglage('r-joker'), rPv = btnReglage('r-pv');
+  const rMode = btnReglage('r-mode'), rJoker = btnReglage('r-joker'), rPv = btnReglage('r-pv'), rDes = btnReglage('r-des');
+  rJoker.after(rDes);
   const rNb = btnReglage('r-nb');
   const rType = [], rNom = [], rIn = [], rNiv = [];
   for (let i = 0; i < 4; i++) {
@@ -1898,6 +1905,9 @@ body.sans-cadre .nav:focus { outline: none; }
     rJoker.hidden = defi || tournoi;
     rJoker.textContent = 'Joker : ' + (reg.joker ? 'activé' : 'désactivé');
     lab(rJoker, 'Joker, ' + (reg.joker ? 'activé' : 'désactivé'));
+    rDes.textContent = 'Dés : ' + (reg.desBlancs ? 'blancs' : 'noirs');
+    lab(rDes, 'Dés ' + (reg.desBlancs ? 'blancs' : 'noirs'));
+    document.body.classList.toggle('des-blancs', !!reg.desBlancs);
     rPv.hidden = !(reg.mode === 'bataille' || tournoi || defi);
     rPv.textContent = 'Points de départ (bataille) : ' + reg.pv;
     lab(rPv, 'Points de départ de la bataille, ' + reg.pv);
@@ -1942,6 +1952,7 @@ body.sans-cadre .nav:focus { outline: none; }
   }
   changer(rMode, function () { reg.mode = MODES_ALL[(MODES_ALL.indexOf(reg.mode) + 1) % MODES_ALL.length]; if (reg.mode === 'bataille' && reg.nb < 2) reg.nb = 2; });
   changer(rJoker, function () { reg.joker = !reg.joker; });
+  changer(rDes, function () { reg.desBlancs = !reg.desBlancs; });
   changer(rPv, function () { reg.pv = PV_CHOIX[(PV_CHOIX.indexOf(reg.pv) + 1) % PV_CHOIX.length]; });
   changer(rNb, function () { const min = reg.mode === 'bataille' ? 2 : 1; reg.nb = reg.nb >= 4 ? min : reg.nb + 1; });
   for (let i = 0; i < 4; i++) {
@@ -2150,10 +2161,9 @@ body.sans-cadre .nav:focus { outline: none; }
   configurerNormal();
   remiseAZero();
   majReglages();
-  echelle();
   majAccueil();
   show('accueil');
-  setTimeout(function () { try { annonceAccueil(); } catch (e) { /* rien */ } }, 600);
+  annonceAccueil();
   try { if (!RAPIDE && natif()) ac(); } catch (e) { /* sans son */ }
   /* Lecteur d'écran : un second « Lancer », placé après STOP et superposé au vrai bouton, permet de passer de STOP à Lancer
      avec la flèche de droite (le lecteur parcourt les éléments dans l'ordre de la page). */
