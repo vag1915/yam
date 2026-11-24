@@ -110,6 +110,7 @@ body.sans-cadre .nav:focus { outline: none; }
 
 /* En partie, l'engrenage et les scores passent dans la colonne de droite : la grille monte jusqu'en haut de l'écran. */
 .dessus > .haut { flex-direction: column; align-items: center; width: 100%; padding: 0; gap: 2px; }
+.engrenage[hidden] { display: none; }
 .dessus .scores { flex: none; width: 100%; align-items: center; text-align: center; font-size: 14px; line-height: 1.3; }
 .dessus .scores.bat { flex-direction: column; align-items: stretch; }
 .grille.standard .gc { min-height: 29px; }
@@ -121,6 +122,14 @@ body.sans-cadre .nav:focus { outline: none; }
 }
 @media (orientation: landscape) {
   .piste { aspect-ratio: 2 / 1; width: min(100%, max(240px, calc((100vh - 230px) * 2))); width: min(100%, max(240px, calc((100dvh - 230px) * 2))); }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .grille { gap: 2px 4px; }
+  .gc { min-height: 17px; font-size: 14px; line-height: 1; padding: 0 4px; border-width: 2px; border-radius: 6px; }
+  .gl { font-size: 12px; line-height: 1; }
+  .gc.entete { font-size: 15px; min-height: 22px; }
+  .grille.standard .gc, .grille.bataille .gc { min-height: 17px; font-size: 14px; }
+  .grille-box { padding: 2px 8px; }
 }
 @media (orientation: landscape) and (max-height: 520px) {
   .score-tour { font-size: 20px; }
@@ -1807,6 +1816,7 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
   function show(v) {
     VUES.forEach(function (x) { $('v-' + x).hidden = x !== v; });
     $('haut').hidden = !(v === 'accueil' || v === 'partie');
+    $('engrenage').hidden = v !== 'accueil';
     $('scores').hidden = v !== 'partie';
     if (v === 'partie') $('dessus').prepend($('haut')); else if ($('haut').parentNode !== $('ecran')) $('ecran').prepend($('haut'));
     if (v === 'partie') { disposer(); majGrille(); placerDouble(); }
