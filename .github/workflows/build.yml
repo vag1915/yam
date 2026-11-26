@@ -125,6 +125,7 @@ jobs:
           import android.view.View;
           import android.view.WindowManager;
           import android.view.accessibility.AccessibilityManager;
+          import android.view.accessibility.AccessibilityNodeInfo;
           import android.webkit.JavascriptInterface;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
@@ -168,6 +169,14 @@ jobs:
                   s.setDomStorageEnabled(true);
                   s.setMediaPlaybackRequiresUserGesture(false);
                   web.setWebViewClient(new WebViewClient());
+                  // Le lecteur d'ecran annonce « vue web » : on presente la vue comme un simple conteneur.
+                  web.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+                      @Override
+                      public void onInitializeAccessibilityNodeInfo(View host, AccessibilityNodeInfo info) {
+                          super.onInitializeAccessibilityNodeInfo(host, info);
+                          info.setClassName("android.view.View");
+                      }
+                  });
                   web.addJavascriptInterface(new Pont(), "AndroidTTS");
                   setContentView(web);
 
