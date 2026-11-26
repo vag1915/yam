@@ -121,23 +121,35 @@ body.sans-cadre .nav:focus { outline: none; }
   .ico { width: 64px; height: 64px; }
 }
 @media (orientation: landscape) {
-  body { padding-block: 14px; }
-  .piste { aspect-ratio: 3.6 / 1; width: min(100%, 520px); border-radius: 22px; }
-}
-@media (orientation: landscape) and (max-height: 600px) {
-  .grille { gap: 2px 4px; }
-  .gc { min-height: 17px; font-size: 14px; line-height: 1; padding: 0 4px; border-width: 2px; border-radius: 6px; }
-  .gl { font-size: 12px; line-height: 1; }
-  .gc.entete { font-size: 15px; min-height: 22px; }
-  .grille.standard .gc, .grille.bataille .gc { min-height: 17px; font-size: 14px; }
-  .grille-box { padding: 2px 8px; }
-}
-@media (orientation: landscape) and (max-height: 520px) {
-  .score-tour { font-size: 20px; }
+  body { padding-block: 12px; }
+  .jeu { flex-direction: column; gap: 6px; }
+  .dessus { flex: none; width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-areas: "rail rail rail" "infos msg haut"; gap: 4px 8px; align-items: center; justify-items: center; }
+  .dessus > .rail { grid-area: rail; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0; }
+  .dessus > .infos { grid-area: infos; justify-self: start; text-align: left; padding: 0; }
+  .dessus > .message { grid-area: msg; min-height: 0; font-size: 16px; }
+  .dessus > .haut { grid-area: haut; justify-self: end; align-items: flex-end; }
+  .dessus .scores.bat { flex-direction: row; align-items: center; }
+  .piste { flex: 1 1 auto; min-width: 0; max-width: 520px; width: auto; aspect-ratio: 5.2 / 1; border-radius: 22px; }
+  .ico { width: 64px; height: 64px; }
   .tour { font-size: 15px; }
-  .message { min-height: 20px; font-size: 16px; }
+  .score-tour { font-size: 20px; padding: 0 8px; }
+  .grille-box { flex: 1 1 auto; max-width: 100%; width: 100%; min-height: 0; overflow: auto; padding: 0 4px; }
+  .grille { width: 100%; max-width: none; justify-content: stretch; grid-template-columns: auto repeat(var(--nn, 9), minmax(0, 1fr)); gap: 3px; }
+  .grille > * { grid-row: var(--gr); grid-column: var(--gc); }
+  .gl { justify-content: center; text-align: center; padding: 0; font-size: 11px; line-height: 1; min-height: 24px; overflow-wrap: anywhere; }
+  .gc { min-height: 24px; font-size: 15px; line-height: 1; padding: 0 2px; border-width: 2px; border-radius: 6px; }
+  .gc.entete { min-height: 24px; width: 30px; font-size: 16px; }
+  .grille.standard, .grille.bataille { --cw: auto; }
+  .grille.standard .gl, .grille.bataille .gl { font-size: 11px; }
+  .grille.standard .gc, .grille.bataille .gc { min-height: 24px; font-size: 15px; }
 }
-@media (max-width: 559px) {
+.gc.entete .eh, .gc.entete.copie { display: none; }
+@media (orientation: landscape) {
+  .gc.entete .ev { display: none; }
+  .gc.entete .eh { display: inline; }
+  .gc.entete.copie { display: flex; }
+}
+@media (max-width: 559px) and (orientation: portrait) {
   .grille { --cw: 52px; gap: 4px; grid-template-columns: 66px repeat(var(--nc, 1), var(--cw)); }
   .gc { font-size: 16px; min-height: 36px; }
   .gl { font-size: 12px; line-height: 1.05; overflow-wrap: anywhere; }
@@ -1122,7 +1134,7 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
   function majDe(i) { lab(dice[i].el, texteDe(dice[i])); }
   function mesurer() {
     const W = zone.clientWidth, H = zone.clientHeight;
-    sz = Math.max(12, Math.min(W * 0.88 / 5 * 0.9, 90));
+    sz = Math.max(12, Math.min(W * 0.88 / 5 * 0.9, 90, H * 0.86));
     zone.style.setProperty('--sz', sz + 'px');
   }
   function pointDansPiste(W, H) {
@@ -1230,6 +1242,10 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
     return L;
   }
   const LIB_CALC = { prime: 'Prime', hautTot: 'Total haut', diff: 'Maxi − mini', bonus: 'Bonus yam', bas: 'Total bas', total: 'Total' };
+  function enteteHtml(c) {
+    const lettre = COLS[c].charAt(0), fleche = c === 1 ? '←' : c === 2 ? '→' : lettre;
+    return '<span class="ev">' + lettre + '</span><span class="eh">' + fleche + '</span>';
+  }
   function construireGrille() {
     const box = $('grille'), nc = colonnes().length;
     box.innerHTML = '';
@@ -1242,16 +1258,30 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
       box.appendChild(mk('gl'));
       for (let c = 0; c < nc; c++) {
         const h = mk('gc entete nav', 'button');
-        h.type = 'button'; h.textContent = COLS[c].charAt(0);
+        h.type = 'button'; h.innerHTML = enteteHtml(c);
         h.dataset.r = '-1'; h.dataset.c = String(c);
         surClic(h, function () { activerColonne(c); });
         box.appendChild(h); headEls.push(h);
+      }
+    }
+    const lg = lignes(), moitie = Math.ceil(lg.length / 2), haute = nc + 1;
+    box.style.setProperty('--nn', moitie);
+    if (nc > 1) {
+      for (let c = 0; c < nc; c++) {
+        headEls[c].style.setProperty('--gr', String(2 + c)); headEls[c].style.setProperty('--gc', '1');
+        const cp = mk('gc entete copie');
+        cp.innerHTML = enteteHtml(c); cp.setAttribute('aria-hidden', 'true');
+        cp.style.setProperty('--gr', String(haute + 2 + c)); cp.style.setProperty('--gc', '1');
+        surClic(cp, function () { activerColonne(c); });
+        box.appendChild(cp);
       }
     }
     lignes().forEach(function (L, ri) {
       const gl = mk('gl');
       gl.textContent = L.t ? LIB_CALC[L.t] : LIB[L.k];
       gl.setAttribute('aria-hidden', 'true');
+      const bl = ri < moitie ? 0 : 1, col = (ri % moitie) + 2;
+      gl.style.setProperty('--gr', String(bl * haute + 1)); gl.style.setProperty('--gc', String(col));
       box.appendChild(gl);
       for (let c = 0; c < nc; c++) {
         if (L.t) {
@@ -1259,12 +1289,14 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
           e.tabIndex = 0;
           surClic(e, function () { dire(e.getAttribute('data-parle')); });
           e.dataset.r = String(ri); e.dataset.c = String(c);
+          e.style.setProperty('--gr', String(bl * haute + 2 + c)); e.style.setProperty('--gc', String(col));
           box.appendChild(e); calcEls[c][L.t] = e;
         } else {
           const e = mk('gc nav', 'button');
           e.type = 'button';
           surClic(e, function () { actionCase(c, L.k); });
           e.dataset.r = String(ri); e.dataset.c = String(c);
+          e.style.setProperty('--gr', String(bl * haute + 2 + c)); e.style.setProperty('--gc', String(col));
           box.appendChild(e); cellEls[c][L.k] = e;
         }
       }
@@ -2132,7 +2164,12 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
       document.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true }));
     }, 80);
   }
+  const vueOuverte = function (v) { const e = $('v-' + v); return !!e && !e.hidden; };
   function lireManettes() {
+    try { lireManettesUnique(); } catch (err) { console.error(err); }
+    requestAnimationFrame(lireManettes);
+  }
+  function lireManettesUnique() {
     const liste = navigator.getGamepads ? navigator.getGamepads() : [];
     for (let g = 0; g < liste.length; g++) {
       const gp = liste[g];
@@ -2149,13 +2186,12 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
         if (etat[k] && !mem[k]) {
           if (k === 'Lancer') { const gob = $('gobelet'); if (gob.getClientRects().length) { gob.focus(); gob.click(); } }
           else if (k === 'Stop') raccourci('valider');
-          else if (k === 'Params') { if (vue('partie')) yGrille(); else raccourci('params'); }
+          else if (k === 'Params') { if (vueOuverte('partie')) yGrille(); }
           else envoyerTouche(k);
         }
         mem[k] = etat[k];
       });
     }
-    requestAnimationFrame(lireManettes);
   }
   function demarrerManette() { if (!boucleManette) { boucleManette = true; requestAnimationFrame(lireManettes); } }
   window.addEventListener('gamepadconnected', demarrerManette);
