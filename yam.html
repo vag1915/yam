@@ -144,17 +144,17 @@ body.sans-cadre .nav:focus { outline: none; }
   .ico { width: 62px; height: 62px; }
   .tour { font-size: 17px; }
   .score-tour { font-size: 24px; padding: 0 8px; }
-  .grille-box { flex: 1 1 auto; max-width: 100%; width: 100%; min-height: 0; overflow: auto; padding: 0 2px; }
+  .grille-box { flex: 1 1 auto; max-width: 100%; width: 100%; min-height: 0; overflow: auto; padding: 10px 2px 0; }
   .grille { width: 100%; max-width: none; justify-content: stretch; grid-template-columns: auto repeat(var(--nn, 18), minmax(0, 1fr)); gap: 3px 2px; }
   .grille > * { grid-row: var(--gr); grid-column: var(--gc); }
   .gl { justify-content: center; text-align: center; padding: 0; font-size: 16px; line-height: 1; min-height: 24px; }
-  .gc { min-height: 36px; font-size: 18px; line-height: 1; padding: 0; border-width: 2px; border-radius: 5px; }
-  .gc.entete { min-height: 36px; width: 34px; font-size: 20px; }
+  .gc { min-height: 54px; font-size: 24px; line-height: 1; padding: 0; border-width: 2px; border-radius: 5px; }
+  .gc.entete { min-height: 54px; width: 36px; font-size: 22px; }
   .grille.standard, .grille.bataille { --cw: auto; }
   .grille.standard .gl { font-size: 13px; letter-spacing: -0.5px; }
   .grille.bataille .gl { font-size: 16px; }
-  .grille.standard .gc { min-height: 34px; font-size: 16px; }
-  .grille.bataille .gc { min-height: 36px; font-size: 18px; }
+  .grille.standard .gc { min-height: 44px; font-size: 18px; letter-spacing: -0.5px; }
+  .grille.bataille .gc { min-height: 50px; font-size: 22px; }
 }
 .gc.entete .eh, .gl .eh { display: none; }
 @media (orientation: landscape) {
@@ -1488,6 +1488,7 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
   }
   const resteTxt = () => (G.lancers >= 3 ? '' : '. Il reste ' + (3 - G.lancers) + (3 - G.lancers > 1 ? ' lancers' : ' lancer'));
   async function lancerHumain(tk) {
+    const depart = document.activeElement;
     await lancerDes(tk);
     if (!vivant(tk)) return;
     const txt = listeVoix(G.dernier);
@@ -1495,9 +1496,16 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
       await dire(txt);
       if (!vivant(tk)) return;
       G.busy = false;
+      /* Après le dernier lancer : le curseur va sur la coche verte (sans valider). */
+      if (document.activeElement === depart || document.activeElement === document.body) allerA($('valider'), '');
     } else {
       G.busy = false;
-      dire(txt);
+      const p = dire(txt);
+      /* Lancer depuis le bouton placé après la coche : retour au gobelet, à gauche des dés. */
+      if (depart && depart !== $('gobelet') && lecteur()) {
+        await p;
+        if (vivant(tk) && document.activeElement === depart) focusSilencieux($('gobelet'));
+      }
     }
   }
   function actionGobelet() {
