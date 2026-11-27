@@ -102,6 +102,16 @@ body.sans-cadre .nav:focus { outline: none; }
 .btn:active { background: var(--blanc); color: var(--noir); }
 .reglage { width: 100%; text-align: left; }
 .bas { padding: 10px 4px 8px; }
+.bas-fin { display: flex; flex-direction: column; gap: 8px; }
+.scores-tous { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.bloc-sc { border: 3px solid var(--blanc); border-radius: 12px; padding: 8px 10px; flex: 0 1 auto; }
+.bloc-sc h3 { margin: 0 0 6px; font-size: 20px; }
+.bloc-sc table { border-collapse: collapse; font-size: 16px; }
+.bloc-sc th, .bloc-sc td { padding: 1px 6px; border-bottom: 1px solid #444; text-align: right; font-weight: 700; }
+.bloc-sc th { text-align: left; text-transform: uppercase; font-size: 13px; }
+.bloc-sc thead th { text-align: center; }
+.bloc-sc tr.calc td, .bloc-sc tr.calc th { color: #ddd; }
+.bloc-sc tr.tot td { border-top: 2px solid var(--blanc); }
 .ok { width: 100%; }
 .liste { display: flex; flex-direction: column; gap: 8px; font-size: 20px; }
 .liste > div { padding: 4px 8px; border-radius: 8px; }
@@ -121,33 +131,35 @@ body.sans-cadre .nav:focus { outline: none; }
   .ico { width: 64px; height: 64px; }
 }
 @media (orientation: landscape) {
+  #v-reglages, #v-perso, #v-fin { flex-direction: column-reverse; }
   body { padding-block: 12px; }
   .jeu { flex-direction: column; gap: 6px; }
-  .dessus { flex: none; width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-areas: "rail rail rail" "infos msg haut"; gap: 4px 8px; align-items: center; justify-items: center; }
-  .dessus > .rail { grid-area: rail; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0; }
-  .dessus > .infos { grid-area: infos; justify-self: start; text-align: left; padding: 0; }
-  .dessus > .message { grid-area: msg; min-height: 0; font-size: 16px; }
+  .dessus { flex: none; width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; grid-template-areas: "msg infos haut" "rail rail rail"; gap: 2px 8px; align-items: center; justify-items: center; }
+  .dessus > .rail { grid-area: rail; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 12px; }
+  .dessus > .infos { grid-area: infos; text-align: center; padding: 0; }
+  .dessus > .message { grid-area: msg; min-height: 0; font-size: 15px; justify-self: start; text-align: left; padding: 0; }
   .dessus > .haut { grid-area: haut; justify-self: end; align-items: flex-end; }
   .dessus .scores.bat { flex-direction: row; align-items: center; }
-  .piste { flex: 1 1 auto; min-width: 0; max-width: 520px; width: auto; aspect-ratio: 5.2 / 1; border-radius: 22px; }
-  .ico { width: 64px; height: 64px; }
-  .tour { font-size: 15px; }
-  .score-tour { font-size: 20px; padding: 0 8px; }
-  .grille-box { flex: 1 1 auto; max-width: 100%; width: 100%; min-height: 0; overflow: auto; padding: 0 4px; }
-  .grille { width: 100%; max-width: none; justify-content: stretch; grid-template-columns: auto repeat(var(--nn, 9), minmax(0, 1fr)); gap: 3px; }
+  .piste { flex: 1 1 0; min-width: 0; max-width: 640px; width: auto; aspect-ratio: 5.6 / 1; border-radius: 22px; }
+  .ico { width: 62px; height: 62px; }
+  .tour { font-size: 17px; }
+  .score-tour { font-size: 24px; padding: 0 8px; }
+  .grille-box { flex: 1 1 auto; max-width: 100%; width: 100%; min-height: 0; overflow: auto; padding: 0 2px; }
+  .grille { width: 100%; max-width: none; justify-content: stretch; grid-template-columns: auto repeat(var(--nn, 18), minmax(0, 1fr)); gap: 3px 2px; }
   .grille > * { grid-row: var(--gr); grid-column: var(--gc); }
-  .gl { justify-content: center; text-align: center; padding: 0; font-size: 11px; line-height: 1; min-height: 24px; overflow-wrap: anywhere; }
-  .gc { min-height: 24px; font-size: 15px; line-height: 1; padding: 0 2px; border-width: 2px; border-radius: 6px; }
-  .gc.entete { min-height: 24px; width: 30px; font-size: 16px; }
+  .gl { justify-content: center; text-align: center; padding: 0; font-size: 16px; line-height: 1; min-height: 24px; }
+  .gc { min-height: 36px; font-size: 18px; line-height: 1; padding: 0; border-width: 2px; border-radius: 5px; }
+  .gc.entete { min-height: 36px; width: 34px; font-size: 20px; }
   .grille.standard, .grille.bataille { --cw: auto; }
-  .grille.standard .gl, .grille.bataille .gl { font-size: 11px; }
-  .grille.standard .gc, .grille.bataille .gc { min-height: 24px; font-size: 15px; }
+  .grille.standard .gl { font-size: 13px; letter-spacing: -0.5px; }
+  .grille.bataille .gl { font-size: 16px; }
+  .grille.standard .gc { min-height: 34px; font-size: 16px; }
+  .grille.bataille .gc { min-height: 36px; font-size: 18px; }
 }
-.gc.entete .eh, .gc.entete.copie { display: none; }
+.gc.entete .eh, .gl .eh { display: none; }
 @media (orientation: landscape) {
-  .gc.entete .ev { display: none; }
-  .gc.entete .eh { display: inline; }
-  .gc.entete.copie { display: flex; }
+  .gc.entete .ev, .gl .ev { display: none; }
+  .gc.entete .eh, .gl .eh { display: inline; }
 }
 @media (max-width: 559px) and (orientation: portrait) {
   .grille { --cw: 52px; gap: 4px; grid-template-columns: 66px repeat(var(--nc, 1), var(--cw)); }
@@ -274,7 +286,12 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
       <div class="liste" id="liste-cumul"></div>
       <div class="info-fin nav" id="info-fin" tabindex="0" role="group" hidden></div>
     </div>
-    <div class="bas"><button class="btn ok nav" id="ok-fin" type="button" aria-label="OK" data-parle="OK">OK</button></div>
+    <div class="bas bas-fin"><button class="btn nav" id="scores-fin" type="button" aria-label="Scores" data-parle="Scores">Scores</button><button class="btn ok nav" id="ok-fin" type="button" aria-label="OK" data-parle="OK">OK</button></div>
+  </div>
+
+  <div class="vue" id="v-scores" hidden>
+    <div class="bas"><button class="btn ok nav" id="ok-scores" type="button" aria-label="OK" data-parle="OK">OK</button></div>
+    <div class="corps"><div class="scores-tous" id="scores-tous"></div></div>
   </div>
 </div>
 
@@ -1134,7 +1151,7 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
   function majDe(i) { lab(dice[i].el, texteDe(dice[i])); }
   function mesurer() {
     const W = zone.clientWidth, H = zone.clientHeight;
-    sz = Math.max(12, Math.min(W * 0.88 / 5 * 0.9, 90, H * 0.86));
+    sz = Math.max(12, Math.min(W * 0.86 / 5 * 0.9, 90, H * 0.8));
     zone.style.setProperty('--sz', sz + 'px');
   }
   function pointDansPiste(W, H) {
@@ -1242,6 +1259,8 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
     return L;
   }
   const LIB_CALC = { prime: 'Prime', hautTot: 'Total haut', diff: 'Maxi − mini', bonus: 'Bonus yam', bas: 'Total bas', total: 'Total' };
+  const LIBC = ['1', '2', '3', '4', '5', '6', '?', '+', '-', '3X', '4X', 'FULL', 'PS', 'GS', 'YAM', '1P', '2P'];
+  const LIBC_CALC = { prime: 'PR', hautTot: 'TH', diff: 'DIF', bonus: 'BY', bas: 'TB', total: 'TT' };
   function enteteHtml(c) {
     const lettre = COLS[c].charAt(0), fleche = c === 1 ? '←' : c === 2 ? '→' : lettre;
     return '<span class="ev">' + lettre + '</span><span class="eh">' + fleche + '</span>';
@@ -1264,24 +1283,18 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
         box.appendChild(h); headEls.push(h);
       }
     }
-    const lg = lignes(), moitie = Math.ceil(lg.length / 2), haute = nc + 1;
-    box.style.setProperty('--nn', moitie);
+    const lg = lignes();
+    box.style.setProperty('--nn', lg.length);
     if (nc > 1) {
-      for (let c = 0; c < nc; c++) {
-        headEls[c].style.setProperty('--gr', String(2 + c)); headEls[c].style.setProperty('--gc', '1');
-        const cp = mk('gc entete copie');
-        cp.innerHTML = enteteHtml(c); cp.setAttribute('aria-hidden', 'true');
-        cp.style.setProperty('--gr', String(haute + 2 + c)); cp.style.setProperty('--gc', '1');
-        surClic(cp, function () { activerColonne(c); });
-        box.appendChild(cp);
-      }
+      for (let c = 0; c < nc; c++) { headEls[c].style.setProperty('--gr', String(2 + c)); headEls[c].style.setProperty('--gc', '1'); }
     }
     lignes().forEach(function (L, ri) {
       const gl = mk('gl');
-      gl.textContent = L.t ? LIB_CALC[L.t] : LIB[L.k];
+      const long = L.t ? LIB_CALC[L.t] : LIB[L.k], court = L.t ? LIBC_CALC[L.t] : LIBC[L.k];
+      gl.innerHTML = '<span class="ev">' + long + '</span><span class="eh">' + court + '</span>';
       gl.setAttribute('aria-hidden', 'true');
-      const bl = ri < moitie ? 0 : 1, col = (ri % moitie) + 2;
-      gl.style.setProperty('--gr', String(bl * haute + 1)); gl.style.setProperty('--gc', String(col));
+      const col = ri + 2;
+      gl.style.setProperty('--gr', '1'); gl.style.setProperty('--gc', String(col));
       box.appendChild(gl);
       for (let c = 0; c < nc; c++) {
         if (L.t) {
@@ -1289,14 +1302,14 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
           e.tabIndex = 0;
           surClic(e, function () { dire(e.getAttribute('data-parle')); });
           e.dataset.r = String(ri); e.dataset.c = String(c);
-          e.style.setProperty('--gr', String(bl * haute + 2 + c)); e.style.setProperty('--gc', String(col));
+          e.style.setProperty('--gr', String(2 + c)); e.style.setProperty('--gc', String(col));
           box.appendChild(e); calcEls[c][L.t] = e;
         } else {
           const e = mk('gc nav', 'button');
           e.type = 'button';
           surClic(e, function () { actionCase(c, L.k); });
           e.dataset.r = String(ri); e.dataset.c = String(c);
-          e.style.setProperty('--gr', String(bl * haute + 2 + c)); e.style.setProperty('--gc', String(col));
+          e.style.setProperty('--gr', String(2 + c)); e.style.setProperty('--gc', String(col));
           box.appendChild(e); cellEls[c][L.k] = e;
         }
       }
@@ -1773,6 +1786,57 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
     const okb = $('ok-fin'), tx = extra && extra.bouton ? extra.bouton : 'OK';
     okb.textContent = tx; lab(okb, tx);
   }
+  function construireScores() {
+    const box = $('scores-tous');
+    box.innerHTML = '';
+    for (let i = 0; i < P.nb; i++) {
+      const F = G.fiches[i];
+      if (!F) continue;
+      const nc = F.cols.length, bat = P.mode === 'bataille';
+      const bloc = document.createElement('div');
+      bloc.className = 'bloc-sc nav'; bloc.tabIndex = 0; bloc.setAttribute('role', 'group');
+      const tot = scoreFiche(F);
+      const h = document.createElement('h3');
+      h.textContent = nom(i) + ' : ' + tot + (bat ? ' points de vie' : ' points');
+      bloc.appendChild(h);
+      const tb = document.createElement('table');
+      tb.setAttribute('aria-hidden', 'true');
+      let html = '';
+      if (nc > 1) { html += '<thead><tr><th></th>'; for (let c = 0; c < nc; c++) html += '<th>' + COLS[c].charAt(0) + '</th>'; html += '</tr></thead>'; }
+      html += '<tbody>';
+      const parle = [];
+      const calcs = [];
+      for (let c = 0; c < nc; c++) calcs.push(calcCol(F, c));
+      lignes().forEach(function (L) {
+        html += '<tr class="' + (L.t ? 'calc' : '') + (L.t === 'total' ? ' tot' : '') + '"><th>' + (L.t ? LIB_CALC[L.t] : LIB[L.k]) + '</th>';
+        for (let c = 0; c < nc; c++) {
+          let v;
+          if (L.t) {
+            const t = calcs[c];
+            v = L.t === 'prime' ? t.p35 + t.p100 : t[L.t];
+          } else v = F.cols[c].v[L.k];
+          html += '<td>' + (v === null || v === undefined ? '' : v) + '</td>';
+          if (v !== null && v !== undefined) parle.push((nc > 1 ? COLS[c].toLowerCase() + ', ' : '') + (L.t ? LIB_CALC[L.t] : PARLE[L.k]) + ', ' + v);
+        }
+        html += '</tr>';
+      });
+      tb.innerHTML = html + '</tbody>';
+      bloc.appendChild(tb);
+      lab(bloc, nom(i) + ', ' + tot + (bat ? ' points de vie' : ' points') + '. ' + parle.join('. ') + '.');
+      box.appendChild(bloc);
+    }
+  }
+  function ouvrirScores() {
+    construireScores();
+    show('scores');
+    focusSilencieux($('ok-scores'));
+    dire('Scores de tous les joueurs.');
+  }
+  function fermerScores() {
+    if (T && !T.fini) { show('fin'); focusSilencieux($('scores-fin')); return; }
+    T = null;
+    retourAccueil();
+  }
   async function finPartie(tk) {
     G.enCours = false; G.busy = true; G.cible = null; box_cible();
     const l = classement(), w = gagnants(l), bat = P.mode === 'bataille';
@@ -1846,7 +1910,7 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
   /* =====================================================================
      ÉCRANS
      ===================================================================== */
-  const VUES = ['accueil', 'partie', 'reglages', 'perso', 'fin'];
+  const VUES = ['accueil', 'partie', 'reglages', 'perso', 'fin', 'scores'];
   function show(v) {
     VUES.forEach(function (x) { $('v-' + x).hidden = x !== v; });
     $('haut').hidden = !(v === 'accueil' || v === 'partie');
@@ -2096,6 +2160,8 @@ body.des-blancs .de.kept svg circle, body.des-blancs .de.joker svg circle { fill
   surClic($('ok-perso'), function () { show('reglages'); majReglages(); focusSilencieux(rPerso); dire('Paramètres'); });
   surClic($('ok-reglages'), function () { sauver(); retourAccueil(); });
   surClic($('ok-fin'), suiteFin);
+  surClic($('scores-fin'), ouvrirScores);
+  surClic($('ok-scores'), fermerScores);
 
   /* =====================================================================
      NAVIGATION AU CLAVIER (flèches + OK) ET LECTURE DE L'ÉLÉMENT ACTIF
